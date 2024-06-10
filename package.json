@@ -1,0 +1,24 @@
+{
+  "name": "react-without-jsx",
+  "version": "1.0.0",
+  "description": "JSX is optional and not required to use React",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "standard": "17.1.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "./node_modules/standard/eslintrc.json"
+    ],
+    "rules": {
+      "space-before-function-paren": "off",
+      "semi": "off"
+    }
+  }
+}

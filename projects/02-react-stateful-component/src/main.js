@@ -11,10 +11,10 @@ const root = ReactDOM.createRoot(domContainer);
 // root.render(Welcome({ name: 'World!' }));
 
 setInterval(
-  () => root.render(
-    React.createElement(Clock, { date: new Date() }, [])
-  ),
-  1000
+    () => root.render(
+        React.createElement(Clock, { date: new Date() }, [])
+    ),
+    1000
 );
 
 //! A React component defined as a class

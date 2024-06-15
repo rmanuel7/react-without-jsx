@@ -18,7 +18,9 @@
     ],
     "rules": {
       "space-before-function-paren": "off",
-      "semi": "off"
+      "semi": "off",
+      "padded-blocks": "off",
+      "indent": ["error", 4]
     }
   }
 }

@@ -1,0 +1,146 @@
+/*!
+ * Tooltip container
+ */
+[data-bs-toggle="tooltip"] {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+    /* If you want dots under the hoverable text */
+}
+
+/*!
+ * Tooltip text
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+}
+
+/*!
+ * Show the tooltip text when you mouse over the tooltip container
+ */
+[data-bs-toggle="tooltip"]:hover .tooltiptext {
+    visibility: visible;
+}
+
+/*!
+ * Right Tooltip
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    top: -5px;
+    left: 105%;
+}
+
+/*!
+ * Left Tooltip
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    top: -5px;
+    right: 105%;
+}
+
+/*!
+ * Top Tooltip
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    width: 120px;
+    bottom: 100%;
+    left: 50%;
+    margin-left: -60px;
+    /* Use half of the width (120/2 = 60), to center the tooltip */
+}
+
+/*!
+ * Bottom Tooltip
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    width: 120px;
+    top: 100%;
+    left: 50%;
+    margin-left: -60px;
+    /* Use half of the width (120/2 = 60), to center the tooltip */
+}
+
+/*!
+ * Tooltip Arrows
+ */
+/*!
+ * Bottom Arrow
+ */
+[data-bs-toggle="tooltip"].tooltiptext::after {
+    content: " ";
+    position: absolute;
+    top: 100%;
+    /* At the bottom of the tooltip */
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: black transparent transparent transparent;
+}
+
+/*!
+ * Top Arrow
+ */
+[data-bs-toggle="tooltip"].tooltiptext::after {
+    content: " ";
+    position: absolute;
+    bottom: 100%;
+    /* At the top of the tooltip */
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent black transparent;
+}
+
+/*!
+ * Left Arrow
+ */
+[data-bs-toggle="tooltip"].tooltiptext::after {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    /* To the left of the tooltip */
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent black transparent transparent;
+}
+
+/*!
+ * Right Arrow
+ */
+[data-bs-toggle="tooltip"].tooltiptext::after {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    /* To the right of the tooltip */
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent transparent black;
+}
+
+/*!
+ * Fade In Tooltips (Animation)
+ */
+[data-bs-toggle="tooltip"].tooltiptext {
+    opacity: 0;
+    transition: opacity 1s;
+}
+
+[data-bs-toggle="tooltip"]:hover .tooltiptext {
+    opacity: 1;
+}

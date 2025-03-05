@@ -31,3 +31,15 @@
   </body>
 </html>
 ```
+
+---
+
+> [!NOTE]
+> Antes de desplegar tu sitio web a producción, debes ser consciente que no compactar tu JavaScript puede disminuir de forma considerable la carga de tu página.
+
+Si ya has compactado los scripts de tu aplicación, tu sitio estará listo para producción si aseguras que el HTML desplegado carga las versiones de React finalizadas en production.min.js:
+
+```html
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+```

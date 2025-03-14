@@ -10,7 +10,7 @@ Error boundaries catch errors during rendering, in lifecycle methods, and in con
 A class component becomes an error boundary if it defines either (or both) of the lifecycle methods static `getDerivedStateFromError()` or `componentDidCatch()`.
 
 > [!IMPORTANT]
-> - Use static `getDerivedStateFromError()` to render a fallback UI after an error has been thrown.
+> - Use `static` `getDerivedStateFromError()` to render a fallback UI after an error has been thrown.
 > - Use `componentDidCatch()` to log error information.
 
 ```javascript

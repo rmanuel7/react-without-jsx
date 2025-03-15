@@ -1,3 +1,343 @@
+# Midldleware And Pipeline
+
+En un proceso de autenticación y autorización en .NET (o en general), la diferencia clave entre un **pipeline** y un **middleware** radica en su propósito y alcance dentro del flujo de ejecución de las solicitudes.
+
+---
+
+### **Pipeline**
+El **pipeline** de una aplicación web es la secuencia de pasos por los que pasa una solicitud desde que ingresa hasta que se genera una respuesta. En **ASP.NET Core**, el pipeline está compuesto por una serie de **middlewares** que procesan la solicitud de manera secuencial.
+
+En el contexto de **autenticación y autorización**, el pipeline podría incluir pasos como:
+1. **Autenticación** (determinar quién es el usuario).
+2. **Autorización** (determinar qué permisos tiene el usuario).
+3. **Manejo de la respuesta** (redirigir, devolver un error, o permitir el acceso).
+
+El pipeline se configura en `Program.cs` con `app.UseXXX()` para agregar middlewares en orden.
+
+Ejemplo:
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseAuthentication(); // Agrega autenticación al pipeline
+app.UseAuthorization();  // Agrega autorización al pipeline
+
+app.MapControllers();
+
+app.Run();
+```
+Aquí, `UseAuthentication` y `UseAuthorization` son **middlewares dentro del pipeline**.
+
+---
+
+### **Middleware**
+Un **middleware** es una unidad de lógica dentro del pipeline que puede procesar, modificar o detener una solicitud. Se ejecuta en orden y puede decidir si pasa la solicitud al siguiente middleware o no.
+
+Para autenticación y autorización, hay dos middlewares principales en ASP.NET Core:
+1. **`UseAuthentication()`**: Este middleware analiza la solicitud entrante, verifica si hay un token o credenciales válidas y establece la identidad del usuario (`HttpContext.User`).
+2. **`UseAuthorization()`**: Este middleware verifica si el usuario autenticado tiene permisos para acceder al recurso solicitado.
+
+Ejemplo de un middleware personalizado para validar un encabezado de autenticación:
+```csharp
+public class CustomAuthMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public CustomAuthMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task Invoke(HttpContext context)
+    {
+        if (!context.Request.Headers.ContainsKey("X-Custom-Auth"))
+        {
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
+        }
+
+        await _next(context);
+    }
+}
+```
+Y se registra en el pipeline con:
+```csharp
+app.UseMiddleware<CustomAuthMiddleware>();
+```
+
+---
+
+### **Diferencias Clave**
+| Aspecto         | Pipeline | Middleware |
+|----------------|------------|-------------|
+| **Definición** | Secuencia de ejecución de middlewares en una solicitud. | Componente dentro del pipeline que maneja una parte específica del procesamiento. |
+| **Alcance** | Incluye todos los middlewares en orden de ejecución. | Se encarga de una tarea específica dentro del pipeline. |
+| **Ejemplo en autenticación/autorización** | `UseAuthentication()` y `UseAuthorization()` son parte del pipeline. | `UseAuthentication()` es un middleware que valida credenciales. |
+
+En resumen:
+- El **pipeline** es el flujo completo de ejecución de una solicitud.
+- Un **middleware** es un bloque de código dentro del pipeline que realiza una tarea específica (como autenticación o autorización).
+
+En .NET, la autenticación y autorización están implementadas como middlewares dentro del pipeline de ASP.NET Core.
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+---
+
+
+Exactamente. El **pipeline** es el conjunto de etapas o pasos por los que pasa una solicitud antes de generar una respuesta. En **ASP.NET Core**, este pipeline se construye con **middlewares**, que son bloques de código encargados de procesar la solicitud en cada etapa.  
+
+En el caso de **autenticación y autorización**, el pipeline incluiría etapas como:  
+1. **Recepción de la solicitud**  
+2. **Middleware de autenticación (`UseAuthentication()`)** → Identifica al usuario.  
+3. **Middleware de autorización (`UseAuthorization()`)** → Verifica si el usuario tiene permisos.  
+4. **Middleware de enrutamiento (`UseRouting()`)** → Determina qué controlador manejará la solicitud.  
+5. **Middleware de ejecución de la acción** → Ejecuta la acción del controlador.  
+6. **Generación de respuesta** → Devuelve el contenido al usuario.  
+
+Si en algún punto una de estas etapas falla (por ejemplo, si la autenticación o autorización no son válidas), el pipeline puede detenerse y devolver un error sin seguir procesando la solicitud.
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+---
+
+
+Dado que quieres implementar esta estructura en **React con ES6 clases**, **sin JSX** y **sin React Router**, podemos construir un sistema de enrutamiento manual utilizando el estado y el `window.location.pathname`.  
+
+Aquí te propongo una estructura organizada siguiendo la jerarquía de tu ejemplo:  
+
+### **Estructura General**
+1. **Router** → Gestiona las rutas y la navegación manualmente.  
+2. **ErrorBoundary** → Captura errores y redirige a una ruta de error.  
+3. **Authentication** → Controla el estado de autenticación del usuario.  
+4. **Authorization** → Verifica los permisos del usuario antes de permitir el acceso.  
+5. **Routes** y **Route** → Define la estructura de las páginas.  
+
+---
+
+### **Código en ES6 sin JSX**
+Aquí está la implementación de cada componente:
+
+```javascript
+class Router {
+    constructor(routes) {
+        this.routes = routes;
+        this.init();
+    }
+
+    init() {
+        window.addEventListener('popstate', () => this.render());
+        this.render();
+    }
+
+    navigate(path) {
+        window.history.pushState({}, '', path);
+        this.render();
+    }
+
+    render() {
+        const path = window.location.pathname;
+        const route = this.routes[path] || this.routes['/404'];
+        if (route) route();
+    }
+}
+
+class ErrorBoundary {
+    constructor(errorPath, child) {
+        this.errorPath = errorPath;
+        this.child = child;
+    }
+
+    render() {
+        try {
+            this.child.render();
+        } catch (error) {
+            console.error('ErrorBoundary caught an error:', error);
+            window.location.pathname = this.errorPath;
+        }
+    }
+}
+
+class Authentication {
+    constructor(loginPath, accessDeniedPath, logoutPath, child) {
+        this.loginPath = loginPath;
+        this.accessDeniedPath = accessDeniedPath;
+        this.logoutPath = logoutPath;
+        this.child = child;
+        this.isAuthenticated = false; // Simula autenticación
+    }
+
+    login() {
+        this.isAuthenticated = true;
+        window.location.pathname = '/Home';
+    }
+
+    logout() {
+        this.isAuthenticated = false;
+        window.location.pathname = this.logoutPath;
+    }
+
+    render() {
+        if (!this.isAuthenticated) {
+            window.location.pathname = this.loginPath;
+        } else {
+            this.child.render();
+        }
+    }
+}
+
+class Authorization {
+    constructor(child) {
+        this.child = child;
+    }
+
+    render() {
+        // Simula verificación de permisos (ajustar según necesidades)
+        if (window.location.pathname.startsWith('/Account')) {
+            console.warn('Access Denied');
+            window.location.pathname = '/AccessDenied';
+            return;
+        }
+        this.child.render();
+    }
+}
+
+class Route {
+    constructor(path, component) {
+        this.path = path;
+        this.component = component;
+    }
+
+    render() {
+        this.component.render();
+    }
+}
+
+class Routes {
+    constructor(routes) {
+        this.routes = routes;
+    }
+
+    render() {
+        const path = window.location.pathname;
+        const route = this.routes[path] || this.routes['/404'];
+        if (route) {
+            route.render();
+        }
+    }
+}
+
+// ** Definimos las páginas ** //
+class HomePage {
+    render() {
+        document.body.innerHTML = '<h1>Home Page</h1>';
+    }
+}
+
+class AboutPage {
+    render() {
+        document.body.innerHTML = '<h1>About Page</h1>';
+    }
+}
+
+class LoginPage {
+    render() {
+        document.body.innerHTML = '<h1>Login Page</h1>';
+    }
+}
+
+class AccessDeniedPage {
+    render() {
+        document.body.innerHTML = '<h1>Access Denied</h1>';
+    }
+}
+
+class NotFoundPage {
+    render() {
+        document.body.innerHTML = '<h1>404 - Page Not Found</h1>';
+    }
+}
+
+// ** Configuración de rutas ** //
+const routes = new Routes({
+    '/': new Route('/', new HomePage()),
+    '/Home': new Route('/Home', new HomePage()),
+    '/Home/About': new Route('/Home/About', new AboutPage()),
+    '/Account/Login': new Route('/Account/Login', new LoginPage()),
+    '/AccessDenied': new Route('/AccessDenied', new AccessDeniedPage()),
+    '/404': new Route('/404', new NotFoundPage()),
+});
+
+// ** Inicializar Router con Autenticación y Autorización ** //
+const app = new ErrorBoundary('/404',
+    new Authentication('/Account/Login', '/AccessDenied', '/',
+        new Authorization(routes)
+    )
+);
+
+new Router(routes.routes);
+```
+
+---
+
+### **¿Cómo funciona este código?**
+1. **Simula React Router** manejando rutas con `window.location.pathname`.  
+2. **`Router`** escucha cambios en la URL y actualiza la vista.  
+3. **`ErrorBoundary`** atrapa errores y redirige a `/404`.  
+4. **`Authentication`** bloquea rutas si el usuario no está autenticado y redirige a `/Account/Login`.  
+5. **`Authorization`** deniega acceso a ciertas rutas si el usuario no tiene permisos.  
+6. **Las rutas (`Routes` y `Route`)** definen qué componente mostrar para cada URL.  
+
+---
+
+### **¿Cómo navegar entre páginas?**
+Como no estamos usando `React Router`, puedes usar:
+```javascript
+window.history.pushState({}, '', '/Home/About');
+```
+o definir botones en las páginas:
+```html
+<button onclick="window.history.pushState({}, '', '/Home/About'); location.reload();">
+    Ir a About
+</button>
+```
+
+---
+
+### **Beneficios de esta implementación**
+✅ No usa JSX  
+✅ No usa `react-router`  
+✅ Simula el flujo de autenticación y autorización  
+✅ Maneja rutas dinámicamente  
+
+¿Qué opinas? ¿Quieres que agregue alguna mejora, como soporte para `localStorage` en la autenticación? 🚀
+
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+---
+
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+
 ¡Claro! Vamos a construir un middleware de autenticación en React con ES6 Clases, sin JSX y sin React Router, basado en la estructura que proporcionaste.
 
 **Estructura del Middleware de Autenticación**

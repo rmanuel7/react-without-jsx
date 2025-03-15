@@ -330,6 +330,195 @@ o definir botones en las páginas:
 
 ---
 
+<br />
+<br />
+<br />
+<br />
+<br />
+
+Gracias por la aclaración. Basándonos en la estructura jerárquica que planteaste, podemos construir los componentes de React utilizando clases ES6 y sin JSX. La idea es que cada componente sea responsable de su función dentro del flujo de enrutamiento.  
+
+---
+
+### **Implementación en ES6 sin JSX**
+```javascript
+class Router extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { currentPath: window.location.pathname };
+
+        this.navigate = this.navigate.bind(this);
+    }
+
+    componentDidMount() {
+        window.addEventListener('popstate', () => {
+            this.setState({ currentPath: window.location.pathname });
+        });
+    }
+
+    navigate(path) {
+        window.history.pushState({}, '', path);
+        this.setState({ currentPath: path });
+    }
+
+    render() {
+        return React.createElement(ErrorBoundary, { 
+            errorPath: '/404', 
+            currentPath: this.state.currentPath, 
+            navigate: this.navigate 
+        }, this.props.children);
+    }
+}
+
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return React.createElement('div', null, 'Error: Something went wrong');
+        }
+
+        return React.createElement(Authentication, { 
+            loginPath: '/Account/Login', 
+            accessDeniedPath: '/AccessDenied', 
+            logoutPath: '/',
+            currentPath: this.props.currentPath, 
+            navigate: this.props.navigate 
+        }, this.props.children);
+    }
+}
+
+class Authentication extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { isAuthenticated: false }; // Simulación de autenticación
+    }
+
+    login() {
+        this.setState({ isAuthenticated: true }, () => {
+            this.props.navigate('/Home');
+        });
+    }
+
+    logout() {
+        this.setState({ isAuthenticated: false }, () => {
+            this.props.navigate(this.props.logoutPath);
+        });
+    }
+
+    render() {
+        if (!this.state.isAuthenticated && this.props.currentPath !== this.props.loginPath) {
+            this.props.navigate(this.props.loginPath);
+            return null;
+        }
+
+        return React.createElement(Authorization, { 
+            currentPath: this.props.currentPath, 
+            navigate: this.props.navigate 
+        }, this.props.children);
+    }
+}
+
+class Authorization extends React.Component {
+    render() {
+        if (this.props.currentPath.startsWith('/Account')) {
+            this.props.navigate('/AccessDenied');
+            return null;
+        }
+
+        return React.createElement(Routes, { 
+            currentPath: this.props.currentPath 
+        }, this.props.children);
+    }
+}
+
+class Routes extends React.Component {
+    render() {
+        const routeComponents = React.Children.toArray(this.props.children);
+        const activeRoute = routeComponents.find(route => route.props.path === this.props.currentPath);
+        return activeRoute ? activeRoute : React.createElement('div', null, '404 - Not Found');
+    }
+}
+
+class Route extends React.Component {
+    render() {
+        return this.props.element;
+    }
+}
+
+// ** Definición de Páginas **
+const HomePage = React.createElement('div', null, 'Home Page');
+const AboutPage = React.createElement('div', null, 'About Page');
+const LoginPage = React.createElement('div', null, 'Login Page');
+const AccessDeniedPage = React.createElement('div', null, 'Access Denied');
+const NotFoundPage = React.createElement('div', null, '404 - Page Not Found');
+
+// ** Renderización del Router con su estructura **
+ReactDOM.render(
+    React.createElement(Router, null,
+        React.createElement(Route, { path: '/Home', element: HomePage }),
+        React.createElement(Route, { path: '/Home/About', element: AboutPage }),
+        React.createElement(Route, { path: '/Account/Login', element: LoginPage }),
+        React.createElement(Route, { path: '/AccessDenied', element: AccessDeniedPage }),
+        React.createElement(Route, { path: '/404', element: NotFoundPage })
+    ),
+    document.getElementById('root')
+);
+```
+
+---
+
+### **Explicación de la Implementación**
+1. **`Router`** → Controla la navegación y actualiza el estado de la ruta actual.  
+2. **`ErrorBoundary`** → Maneja errores y redirige a `/404` si ocurre un fallo.  
+3. **`Authentication`** → Verifica si el usuario está autenticado y, si no, lo redirige a `/Account/Login`.  
+4. **`Authorization`** → Comprueba los permisos del usuario y deniega acceso si es necesario.  
+5. **`Routes`** → Renderiza el `Route` correspondiente según `window.location.pathname`.  
+6. **`Route`** → Define cada página en la aplicación.  
+
+---
+
+### **¿Cómo funciona la navegación?**
+Como no usamos `react-router`, la navegación se hace con `history.pushState` dentro del método `navigate(path)` en el `Router`.
+
+Puedes cambiar la URL manualmente con:
+```javascript
+window.history.pushState({}, '', '/Home');
+location.reload();
+```
+O agregar botones en cada página:
+```html
+<button onclick="window.history.pushState({}, '', '/Home/About'); location.reload();">
+    Ir a About
+</button>
+```
+
+---
+
+### **Beneficios de esta Implementación**
+✅ Cumple con la jerarquía que propusiste.  
+✅ No usa JSX.  
+✅ No depende de `react-router`.  
+✅ Simula autenticación y autorización.  
+
+---
+
+¿Qué te parece este enfoque? ¿Quieres agregar más funcionalidades como `localStorage` para recordar el estado de autenticación? 🚀
+
+<br />
+<br />
+<br />
+<br />
+<br />
+
+---
 
 <br />
 <br />

@@ -4,7 +4,7 @@ import AccessDenied from './AccessDenied.js';
 import { createReactElement as h } from '../Wrappers/ReactFunctions.js';
 
 const Authorization = withAuthz(
-    class extends React.Component {
+    class Authorization extends React.Component {
         render() {
             const { user, authz, children } = this.props;
 

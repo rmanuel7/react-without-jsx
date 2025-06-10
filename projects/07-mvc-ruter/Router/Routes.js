@@ -99,21 +99,6 @@ class Routes extends React.Component {
                 // matchPath debe ser tu función para matching con params (impleméntala según tus reglas)
                 const params = matchPath(routePath, currentLocationPath);
                 if (params) {
-                    // Instancia el controlador y ejecuta la acción si corresponde
-                    let outlet = null;
-                    if (props.controller && typeof props.controller.prototype[props.action] === "function") {
-                        const ctrlInstance = new props.controller();
-                        outlet = ctrlInstance[props.action]({
-                            params,
-                            location: currentLocationPath,
-                            fromQuery: this.props.query,
-                            fromPopstate: this.props.stateData
-                        });
-                    } else if (props.element) {
-                        outlet = props.element;
-                    } else {
-                        outlet = h({ type: "div", children: ["404 Acción no encontrada"] });
-                    }
                     return {
                         wrappers,
                         outlet,

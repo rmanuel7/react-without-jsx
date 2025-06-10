@@ -1,13 +1,10 @@
-import React from "react";
-
-import React from "react";
-import { OutletContext } from "./OutletContext";
-import Outlet from "./Outlet";
+import OutletContext from "./OutletContext.js";
+import Outlet from "./Outlet.js";
 // Importa tus wrappers y componentes de rutas
-import { Authorize } from "./Authorize";
-import { AllowAnonymous } from "./AllowAnonymous";
-import Controller from "./Controller";
-import Route from "./Route";
+import Authorize from "../Authorization/Authorize.js";
+import AllowAnonymous from "../Authorization/AllowAnonymous.js";
+import Controller from "../Controllers/Controller.js";
+import Route from "./Route.js";
 
 /**
  * Componente Routes:
@@ -17,7 +14,7 @@ class Routes extends React.Component {
     render() {
         const { children, location } = this.props;
 
-        const contextValues = matchRouteAndBuildContexts(
+        const contextValues = matchRoute(
             React.Children.toArray(children),
             location,
             "",

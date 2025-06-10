@@ -1,17 +1,8 @@
-import { AuthzContext } from "./AuthzContext";
-import Outlet from "./Outlet";
+import AuthzContext from "./AuthzContext.js";
 
 class AllowAnonymous extends React.Component {
     render() {
-        return h({
-            type: AuthzContext.Provider,
-            props: {
-                value: { type: 'allowAnonymous' }
-            },
-            children: [
-                h({ type: Outlet })
-            ]
-        });
+        return null;
     }
 }
 

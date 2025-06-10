@@ -1,4 +1,4 @@
-function matchRoute(routes, pathname) {
+function matchPath(routes, pathname) {
     // Quita trailing slashes para uniformidad
     const cleanPath = pathname.replace(/\/+$/, '') || '/';
 
@@ -33,4 +33,4 @@ function matchRoute(routes, pathname) {
     return { route: null, params: {} };
 }
 
-export default matchRoute;
+export default matchPath;

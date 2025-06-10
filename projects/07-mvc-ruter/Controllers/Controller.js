@@ -1,11 +1,11 @@
-class Controller {
-  /**
-   * Esta función se llama desde la acción para devolver el Outlet.
-   * El contexto se inyectará por el dispatcher (Routes).
-   */
-  View() {
-    // El Outlet renderiza la vista real; los datos/contexto se pasan por OutletContext
-    return h({ type: Outlet });
-  }
+/** 
+ * Este componente solo existe para declarar la ruta y props del controlador.
+ * No renderiza nada, solo es útil para el builder de rutas.
+ */
+class Controller extends React.Component {
+    render() {
+        return null;
+    }
 }
+
 export default Controller;

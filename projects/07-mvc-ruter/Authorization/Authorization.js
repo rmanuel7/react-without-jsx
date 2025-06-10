@@ -1,7 +1,7 @@
 import withAuthz from './withAuthz.js';
 import Outlet from '../Router/Outlet.js';
 import AccessDenied from './AccessDenied.js';
-import { createReactElement as h } from '../Wrappers/ReactFunctions.js';
+import { createReactElement as h } from '../Shared/ReactFunctions.js';
 
 class AuthorizationBase extends React.Component {
     render() {

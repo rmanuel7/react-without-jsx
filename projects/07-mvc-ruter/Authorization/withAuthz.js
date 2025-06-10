@@ -28,6 +28,6 @@ function withAuthz(Component) {
             });
         }
     };
-};
+}
 
 export default withAuthz;

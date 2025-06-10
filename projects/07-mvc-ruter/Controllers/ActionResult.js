@@ -3,17 +3,24 @@ import ActionResultContext from "./ActionResultContext";
 export class ActionResult extends React.Component {
     
     render() {
-        const outletInfo = this.context;
-        const isAuthorized = /* tu lógica de autorización */;
-        if (!isAuthorized) {
-            return h({ type: "div", children: ["Acceso denegado"] });
+        if (route && route.controller && route.action) {
+            const controllerInstance = new route.controller();
+            const context = {
+                params,
+                location: { pathname: this.state.currentPath },
+                navigate: this.navigate
+            };
+            const view = controllerInstance[route.action]
+                ? controllerInstance[route.action](context)
+                : React.createElement('div', null, '404 - Acción no encontrada');
+        
+            return React.createElement(
+                RouterContext.Provider,
+                { value: { location: { pathname: this.state.currentPath }, params, navigate: this.navigate } },
+                view
+            );
         }
-        // Si está autorizado, ejecuta el controlador/acción aquí:
-        let actionResult = null;
-        if (outletInfo.controller && outletInfo.action) {
-            const controllerInstance = new outletInfo.controller();
-            actionResult = controllerInstance[outletInfo.action](outletInfo.outletProps);
-        }
+        
         // Provee el resultado al OutletContext:
         return h({
             type: OutletContext.Provider,

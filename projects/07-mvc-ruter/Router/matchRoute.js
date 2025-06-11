@@ -155,7 +155,6 @@ function matchRoute(children, currentLocationPath, basePath = "", currentContext
 
                 const actionInfo = {
                     path: currentLocationPath,
-                    name: type.name,
                     props: props,
                     fromRoute: params,
                 };

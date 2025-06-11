@@ -13,6 +13,6 @@ function normalizePath(path) {
     const endNormalized = duplicateNormalized.replace(/\/$/, '');
         
     return endNormalized || '/';
-};
+}
 
 export default normalizePath;

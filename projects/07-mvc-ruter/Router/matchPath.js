@@ -32,6 +32,6 @@ function matchPath(pattern, path) {
     }
 
     return params;
-};
+}
 
 export default matchPath;

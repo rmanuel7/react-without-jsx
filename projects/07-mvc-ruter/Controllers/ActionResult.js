@@ -15,7 +15,7 @@ class ActionResult extends React.Component {
                     children: [router =>
                         h({
                             type: ActionContext.Consumer,
-                            children: [actionCtx =>
+                            children: [actionCtx => {
                                 const { controller, action } = actionCtx || {};
                                 if (!controller || !action) return null;
 

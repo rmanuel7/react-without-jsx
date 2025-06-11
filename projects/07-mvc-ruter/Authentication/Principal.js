@@ -1,3 +1,5 @@
+import Identity from './Identity.js';
+
 /**
  * @class Principal
  * @description Representa al poseedor de una identidad, típicamente un usuario autenticado.

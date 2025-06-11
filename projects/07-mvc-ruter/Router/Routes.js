@@ -1,3 +1,5 @@
+import { MVCROUTER_ROUTES_TYPE } from "../Shared/MvcSymbols.js";
+import { createReactElement as h } from '../Shared/ReactFunction.js';
 import OutletContext from "./OutletContext.js";
 import Outlet from "./Outlet.js";
 // Importa tus wrappers y componentes de rutas
@@ -5,13 +7,14 @@ import Authorize from "../Authorization/Authorize.js";
 import AllowAnonymous from "../Authorization/AllowAnonymous.js";
 import Controller from "../Controllers/Controller.js";
 import Route from "./Route.js";
-import { createReactElement as h } from '../Shared/ReactFunction.js';
 
 /**
  * Componente Routes:
  * Hace matching recursivo, construye la pila de wrappers y renderiza el outlet final usando contextos.
  */
 class Routes extends React.Component {
+    static __typeof = MVCROUTER_ROUTES_TYPE;
+    
     render() {
         const { children, location } = this.props;
 

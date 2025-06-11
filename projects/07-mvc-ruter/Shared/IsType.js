@@ -2,20 +2,22 @@ import {
  MVCROUTER_ROUTE_TYPE,
  MVCROUTER_ROUTES_TYPE,
  MVCROUTER_CONTROLLER_TYPE,
+ MVCROUTER_LAYOUT_TYPE,
  MVCROUTER_AUTHORIZE_TYPE,
  MVCROUTER_ALLOWANONYMOUS_TYPE
 } from './MvcSymbols.js';
 
 export function typeOf(object) {
-  if (typeof object === 'object' && object !== null) {
-    const __typeof = object.__typeof;
-    switch (__typeof) {
-      case MVCROUTER_ROUTE_TYPE:
-      case MVCROUTER_ROUTES_TYPE:
-      case MVCROUTER_CONTROLLER_TYPE:
-      case MVCROUTER_AUTHORIZE_TYPE:
-      case MVCROUTER_ALLOWANONYMOUS_TYPE:
-        return __typeof;
+    if (typeof object === 'object' && object !== null) {
+        const __typeof = object.__typeof;
+        switch (__typeof) {
+            case MVCROUTER_ROUTE_TYPE:
+            case MVCROUTER_ROUTES_TYPE:
+            case MVCROUTER_CONTROLLER_TYPE:
+            case MVCROUTER_LAYOUT_TYPE:
+            case MVCROUTER_AUTHORIZE_TYPE:
+            case MVCROUTER_ALLOWANONYMOUS_TYPE:
+                return __typeof;
     }
   }
 
@@ -32,6 +34,10 @@ export function isRoutes(object) {
 
 export function isController(object) {
   return typeOf(object) === MVCROUTER_CONTROLLER_TYPE;
+}
+
+export function isLayout(object) {
+  return typeOf(object) === MVCROUTER_LAYOUT_TYPE;
 }
 
 export function isAuthorize(object) {

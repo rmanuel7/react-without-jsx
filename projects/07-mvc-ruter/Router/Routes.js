@@ -5,6 +5,7 @@ import Authorize from "../Authorization/Authorize.js";
 import AllowAnonymous from "../Authorization/AllowAnonymous.js";
 import Controller from "../Controllers/Controller.js";
 import Route from "./Route.js";
+import { createReactElement as h } from '../Shared/ReactFunction.js';
 
 /**
  * Componente Routes:

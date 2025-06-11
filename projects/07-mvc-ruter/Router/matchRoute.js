@@ -101,7 +101,7 @@ function matchRoute(children, currentLocationPath, basePath = "", currentContext
 
         if (isAuthorize(type) || isAllowAnonymous(type)) {
             const authorizationDescriptor = {
-                type: isAuthorize(type) ? 'authorize' : 'allowAnonymous',,
+                type: isAuthorize(type) ? 'authorize' : 'allowAnonymous',
                 config: props
             };
             const newContextValues = { ...currentContextValues, authorization: authorizationDescriptor };

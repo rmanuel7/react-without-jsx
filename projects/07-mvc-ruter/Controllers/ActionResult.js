@@ -1,31 +1,59 @@
 import ActionResultContext from "./ActionResultContext";
 
-export class ActionResult extends React.Component {
-    
+class ActionResult extends React.Component {
     render() {
-        if (route && route.controller && route.action) {
-            const controllerInstance = new route.controller();
-            const context = {
-                params,
-                location: { pathname: this.state.currentPath },
-                navigate: this.navigate
-            };
-            const view = controllerInstance[route.action]
-                ? controllerInstance[route.action](context)
-                : React.createElement('div', null, '404 - Acción no encontrada');
-        
-            return React.createElement(
-                RouterContext.Provider,
-                { value: { location: { pathname: this.state.currentPath }, params, navigate: this.navigate } },
-                view
-            );
-        }
-        
-        // Provee el resultado al OutletContext:
         return h({
-            type: OutletContext.Provider,
-            props: { value: { ...outletInfo, actionResult } },
-            children: this.props.children
+            type: AuthContext.Consumer,
+            children: [auth =>
+                h({
+                    type: RouterContext.Consumer,
+                    children: [router =>
+                        h({
+                            type: ActionContext.Consumer,
+                            children: [actionCtx =>
+                                const { controller, action } = actionCtx || {};
+                                if (!controller || !action) return null;
+
+                                // Instanciar el controller lógico y ejecutar la acción
+                                const ControllerClass = controller.type;
+                                const ctrlInstance = new ControllerClass(controller.props);
+
+                                const actionMethodName = action.props.action || "index";
+                                const actionMethod = ctrlInstance[actionMethodName];
+                                if (typeof actionMethod !== "function") return null;
+
+                                // Componer el contexto estilo ASP.NET Core
+                                const ctx = {
+                                    req: router,
+                                    res: outletCtx,
+                                    user: auth?.user,
+                                    ...action.props,      // extras de la ruta
+                                    fromRoute: action.fromRoute,
+                                    fromQuery: router.fromQuery,
+                                    fromPopstate: router.stateData
+                                };
+
+                                const result = actionMethod.call(ctrlInstance, ctx);
+                                
+                                return h({
+                                    type: OutletContext.Consumer,
+                                    children: [({ outlet: layout }) =>
+                                        h({
+                                            type: OutletContext.Provider,
+                                            props: { value: { result } },
+                                            children: [
+                                                o({ element: layout ? layout: result })
+                                            ]
+                                        })
+                                    ]
+                                })
+                            }]
+                        })
+                    ]
+                })
+            ]
         });
     }
 }
+
+export default ActionResult;

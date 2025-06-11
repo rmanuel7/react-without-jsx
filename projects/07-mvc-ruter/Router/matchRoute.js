@@ -4,7 +4,7 @@ import {
     isAuthorize,
     isAllowAnonymous
 } from '../Shared/IsType.js';
-import normalizePath from '../Shared/normalizePath.js';
+import normalizePath from './normalizePath.js';
 import matchPath from './matchPath.js';
 
 /**

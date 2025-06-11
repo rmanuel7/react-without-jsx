@@ -21,6 +21,6 @@ function parseQueryParams(queryString) {
         }
     });
     return params;
-};
+}
 
 export default parseQueryParams;

@@ -1,36 +1,37 @@
-function matchPath(routes, pathname) {
-    // Quita trailing slashes para uniformidad
-    const cleanPath = pathname.replace(/\/+$/, '') || '/';
+/**
+ * Compara una URL con un patrón de ruta (que puede incluir parámetros dinámicos como ":id").
+ * Extrae los parámetros de la URL y los devuelve.
+ *
+ * @param {string} pattern - El patrón de ruta, ej. "/users/:id", "/products/:category/:productId".
+ * @param {string} path - La URL real a comparar, ej. "/users/123", "/products/electronics/abc".
+ * @returns {object | null} - Un objeto con los parámetros extraídos si hay una coincidencia,
+ * o `null` si no hay coincidencia.
+ * Ej: { id: "123" } o { category: "electronics", productId: "abc" }.
+ */
+function matchPath(pattern, path) {
+    // Escapar caracteres especiales en el patrón para la expresión regular,
+    // pero mantener los dos puntos para los parámetros.
+    const escapedPattern = pattern.replace(/\//g, '\\/').replace(/:([a-zA-Z0-9_]+)/g, '([^\\/]+)');
 
-    for (let route of routes) {
-        // Soporte exacto
-        if (route.path === cleanPath) {
-            return { route, params: {} };
-        }
-        // Soporte básico para parámetros tipo /home/about/:id
-        // route.path: "/home/about/:id"
-        // pathname:   "/home/about/42"
-        const routeParts = route.path.split('/');
-        const pathParts = cleanPath.split('/');
-        if (routeParts.length === pathParts.length) {
-            let params = {};
-            let match = true;
-            for (let i = 0; i < routeParts.length; i++) {
-                if (routeParts[i].startsWith(':')) {
-                    const paramName = routeParts[i].slice(1);
-                    params[paramName] = pathParts[i];
-                } else if (routeParts[i] !== pathParts[i]) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
-                return { route, params };
-            }
-        }
+    // Crear la expresión regular. El '^' y '$' aseguran una coincidencia exacta de la ruta.
+    const regex = new RegExp(`^${escapedPattern}$`);
+    const match = path.match(regex);
+
+    if (!match) {
+        return null; // No hay coincidencia
     }
-    // No match found
-    return { route: null, params: {} };
-}
+
+    // Extraer los nombres de los parámetros del patrón
+    const paramNames = (pattern.match(/:([a-zA-Z0-9_]+)/g) || []).map(param => param.substring(1));
+
+    // Mapear los valores capturados por la expresión regular a los nombres de los parámetros
+    // match[0] es la coincidencia completa, los demás son los grupos de captura.
+    const params = {};
+    for (let i = 0; i < paramNames.length; i++) {
+        params[paramNames[i]] = match[i + 1];
+    }
+
+    return params;
+};
 
 export default matchPath;

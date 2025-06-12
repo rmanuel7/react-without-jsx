@@ -11,7 +11,8 @@
 
 ```js
 // Correcto
-import { createReactElement as h } from '../../Shared/ReactFunctions.js';
+import { createReactElement as h } from './Shared/ReactFunctions.js';
+
 const MyComponent = class extends React.Component {
     render() {
         return h({

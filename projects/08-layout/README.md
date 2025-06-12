@@ -1,3 +1,20 @@
+```
+Ejemplo de Uso y Estructura de Archivos
+Para usar estos componentes, podrías estructurar tus archivos de la siguiente manera:
+
+src/
+├── components/
+│   ├── layout/
+│   │   ├── Header.js
+│   │   ├── Sidebar.js
+│   │   ├── Panel.js
+│   │   ├── Toggle.js
+│   │   └── Offcanvas.js
+│   └── createReactElement.js
+├── App.js
+├── index.js
+└── index.css (para los estilos básicos)
+```
 ¡Excelente! Integrar Bootstrap para los estilos es una gran idea, ya que te ahorrará mucho trabajo en CSS y te dará un diseño consistente.
 
 Ahora, hablemos de las diferencias y el objetivo de cada uno de esos componentes en el contexto de una página web, especialmente cuando pensamos en layouts y en cómo Bootstrap los maneja:

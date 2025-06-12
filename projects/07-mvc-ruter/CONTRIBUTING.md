@@ -11,13 +11,14 @@
 
 ```js
 // Correcto
+import { createReactElement as h } from '../../Shared/ReactFunctions.js';
 const MyComponent = class extends React.Component {
     render() {
-        return ReactFunctions.createElement({
+        return h({
             type: 'div',
             props: {},
             children: [
-                ReactFunctions.createElement({
+                h({
                     type: 'h1',
                     props: { style: { color: 'blue' } },
                     children: ['Título']

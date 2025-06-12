@@ -123,3 +123,5 @@ class AuthenticationProperties {
         return this.#expiresUtc.getTime() < Date.now();
     }
 }
+
+export default AuthenticationProperties;

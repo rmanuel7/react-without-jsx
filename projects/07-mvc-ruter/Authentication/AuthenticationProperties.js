@@ -111,17 +111,6 @@ class AuthenticationProperties {
     set authenticationScheme(value) {
         this.#authenticationScheme = value;
     }
-
-    /**
-     * Verifica si el ticket ha expirado.
-     * @returns {boolean} True si el ticket ha expirado, false en caso contrario o si no tiene fecha de expiración.
-     */
-    hasExpired() {
-        if (!this.#expiresUtc) {
-            return false; // No expira si no hay fecha de expiración definida
-        }
-        return this.#expiresUtc.getTime() < Date.now();
-    }
 }
 
 export default AuthenticationProperties;

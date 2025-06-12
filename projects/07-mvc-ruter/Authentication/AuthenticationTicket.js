@@ -64,7 +64,10 @@ class AuthenticationTicket {
      * @returns {boolean} True si el ticket ha expirado, false en caso contrario.
      */
     hasExpired() {
-        return this.#properties.hasExpired();
+        if (!this.#properties.expiresUtc) {
+            return false; // No expira si no hay fecha de expiración definida
+        }
+        return this.#properties.expiresUtc.getTime() < Date.now();
     }
 
     /**

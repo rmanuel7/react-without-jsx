@@ -1,0 +1,19 @@
+{
+  "name": "react-nolayouts",
+  "version": "1.0.0",
+  "description": "Layouts en React sin JSX",
+  "main": "index.js",
+  "scripts": {
+    "start": "parcel index.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "18.0.0",
+    "react-dom": "18.0.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.0.0"
+  }
+}

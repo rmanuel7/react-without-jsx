@@ -1,12 +1,33 @@
-import SessionValidation from '../Authorization/SessionValidation.js';
-import Result from '../Common/Result.js';
-import TimeLeft from '../Controls/TimeLeft.js';
-import formatTimeLeft from '../Utils/formatTimeLeft.js';
+/**
+ * Define la estructura del estado interno del componente de autenticación.
+ * 
+ * Este estado gestiona la información sobre el proceso de validación de la sesión,
+ * el ticket de autenticación actual, el usuario autenticado y las opciones de configuración.
+ *
+ * @typedef {object} AuthenticationState
+ * @property {boolean} isValidating - Indica si el componente está actualmente en proceso de
+ * validar o cargar la sesión de autenticación (ej. al inicio de la aplicación).
+ * @property {AuthenticationTicket} ticket - El objeto `AuthenticationTicket` actual,
+ * que encapsula la identidad del usuario y las propiedades de la sesión.
+ * @property {ClaimsPrincipal} user - El objeto `ClaimsPrincipal`
+ * que representa la identidad del usuario actualmente autenticado (o el usuario "visitante").
+ * Es un atajo a `ticket.principal`.
+ * @property {AuthOptions} options - Un objeto `AuthOptions` que contiene
+ * las configuraciones y parámetros para el comportamiento de la autenticación.
+ */
+
+
 import { createReactElement as h } from '../Shared/ReactFunctions.js';
-import AuthContext from './AuthContext.js';
-import { ApplicationUser } from './Principal.js';
 import withRouter from '../Router/withRouter.js';
+import Result from '../Common/Result.js';
+
+import AuthContext from './AuthContext.js';
+import AuthenticationTicket from './AuthenticationTicket.js';
 import AuthOptions from './AuthOptions.js';
+import ClaimsPrincipal from './ClaimsPrincipal.js';
+import visitorTicket from './visitorTicket.js';
+import SessionValidation from './SessionValidation.js';
+
 
 /**
  * Cuando un usuario se autentica con su nombre de usuario y contraseña, se le emite un token que contiene un ticket de autenticación.
@@ -44,7 +65,7 @@ class Authentication extends React.Component {
     constructor(props) {
         super(props);
         console.info('[Authentication] constructor.');
-        
+
         if (!this.props.provider) {
             console.error("No se especificó un proveedor de autenticación");
             throw new Error("Se requiere un proveedor de autenticación");
@@ -53,7 +74,8 @@ class Authentication extends React.Component {
         /** @type {AuthenticationState} - Configuración del estado del componente Authentication. */
         this.state = {
             isValidating: true,
-            user: new ApplicationUser({}),
+            ticket: visitorTicket,
+            user: visitorTicket.principal,
             options: new AuthOptions(props.options),
         };
 
@@ -61,7 +83,7 @@ class Authentication extends React.Component {
         this.validate = this.validate.bind(this);
         this.refresh = this.refresh.bind(this);
         this.logout = this.logout.bind(this);
-        this.isTokenNearExpiry = this.isTokenNearExpiry.bind(this);
+        this.isNearExpiry = this.isNearExpiry.bind(this);
     }
 
     /**
@@ -84,13 +106,12 @@ class Authentication extends React.Component {
             onValidate: this.validate,
             onRefresh: this.refresh,
             onLogout: this.logout,
-            onExpiry: this.isTokenNearExpiry,
-            timeLeft: this.renderTimeLeft()
+            onExpiry: this.isNearExpiry
         };
 
         // Mientras se valida la sesión, muestra un mensaje de carga.
         if (isValidating) {
-            return h({ type: SessionValidation, props: {}, children: [] });
+            return h({ type: SessionValidation });
         }
 
         // Renderizar el componente
@@ -151,17 +172,18 @@ class Authentication extends React.Component {
      * Determina si el componente debe actualizarse en función del estado de validación.
      * 
      * @param {Object} nextProps - Las próximas propiedades del componente.
-     * @param {Object} nextState - El próximo estado del componente.
+     * @param {AuthenticationState} nextState - El próximo estado del componente.
      * @returns {boolean} - `true` si el componente debe actualizarse, `false` en caso contrario.
      */
     shouldComponentUpdate(nextProps, nextState) {
         console.log('[Authentication] shouldComponentUpdate.');
         // Comprueba si ha cambiado el estado de validación
-        const { user } = this.state;
-        const shouldUpdate = user.identity.isAuthenticated !== nextState.user.identity.isAuthenticated;
+        const shouldUpdate = this.state.user.identity.isAuthenticated !== nextState.user.identity.isAuthenticated;
         const isValidating = this.state.isValidating !== nextState.isValidating;
-        const isExpeiry = user.expiresIn !== nextState.user.expiresIn;
-        if (shouldUpdate || isValidating) console.log({ shouldUpdate, isValidating, isExpeiry });
+        const isExpeiry    = this.state.ticket.hasExpired() !== nextState.ticket.hasExpired();
+        if (shouldUpdate || isValidating || isExpeiry) {
+            console.log({ shouldUpdate, isValidating, isExpeiry });
+        };
         return shouldUpdate || isValidating || isExpeiry;
     }
 
@@ -178,17 +200,23 @@ class Authentication extends React.Component {
         // Extrae el proveedor de autenticación de las propiedades del componente.
         const { provider: authProvider } = this.props;
         // Extrae opciones de autenticación desde el estado del componente.
-        const { options, isValidating } = this.state;
+        const { options } = this.state;
 
         // Intenta realizar el login con el proveedor de autenticación.
         const result = await authProvider.login(options.loginPath, credentials);
 
         return result.switch(
             (value) => { // onSuccess
+                if (!(value.data instanceof AuthenticationTicket)) {
+                    throw new Error("Principal must be initialized with an instance of AuthenticationTicket.");
+                }
+                const ticket = value.data;
+
                 // Actualiza el estado para reflejar una autenticación exitosa.
                 this.setState({
-                    isValidating: false,
-                    user: new ApplicationUser(value.data)
+                    ticket: ticket,
+                    user: ticket.principal,
+                    isValidating: false
                 });
                 console.log('[Authentication] autenticación exitosa');
                 return Result.success(true);
@@ -196,8 +224,9 @@ class Authentication extends React.Component {
             (error) => { // onFailure
                 // Manejo de errores: actualiza el estado y muestra un mensaje en la consola.
                 this.setState({
+                    ticket: visitorTicket,
+                    user: visitorTicket.principal,
                     isValidating: false,
-                    user: new ApplicationUser({})
                 });
                 console.error("[Authentication] Error en el login:", error);
                 // Posiblemente mostrar un mensaje de error al usuario
@@ -219,27 +248,23 @@ class Authentication extends React.Component {
         // Extrae el proveedor de autenticación de las propiedades del componente.
         const { provider: authProvider } = this.props;
         // Extrae opciones de autenticación desde el estado del componente.
-        const { options, isValidating } = this.state;
+        const { options } = this.state;
 
         // Intenta realizar la validación del estado de la sesión con el proveedor de autenticación.
         const result = await authProvider.validate(options.validatePath);
 
         return result.switch(
             (value) => { // onSuccess
-                if (!value?.data || typeof value?.data !== 'object') {
-                    // Manejo de errores: actualiza el estado y muestra un mensaje en la consola.
-                    this.setState({
-                        isValidating: false,
-                        user: new ApplicationUser({})
-                    });
-                    console.error('[Authentication] Datos invalidos. El dato debe ser un objeto no nulo.');
-                    return false;
+                if (!(value.data instanceof AuthenticationTicket)) {
+                    throw new Error("Principal must be initialized with an instance of AuthenticationTicket.");
                 }
+                const ticket = value.data;
 
                 // Actualiza el estado para reflejar una validación exitosa.
                 this.setState({
+                    ticket: ticket,
+                    user: ticket.principal,
                     isValidating: false,
-                    user: new ApplicationUser(value.data)
                 });
                 console.log('[Authentication] validación exitosa');
                 return true;
@@ -247,8 +272,9 @@ class Authentication extends React.Component {
             (error) => { // onFailure
                 // Manejo de errores: actualiza el estado y muestra un mensaje en la consola.
                 this.setState({
+                    ticket: visitorTicket,
+                    user: visitorTicket.principal,
                     isValidating: false,
-                    user: new ApplicationUser({})
                 });
                 console.error("[Authentication] Error en la validación:", error);
                 return false;
@@ -272,18 +298,24 @@ class Authentication extends React.Component {
         // Extrae el proveedor de autenticación de las propiedades del componente.
         const { provider: authProvider } = this.props;
         // Extrae el usuario y las opciones de autenticación desde el estado del componente.
-        const { options, isValidating } = this.state;
+        const { options } = this.state;
 
         // Verificar si el token está próximo a expirar
-        if (this.isTokenNearExpiry()) {
+        if (this.isNearExpiry()) {
             console.info("[Authentication] El token está próximo a expirar, intentando renovación...");
             const result = await authProvider.refresh(options.refreshPath);
 
             return result.switch(
                 (value) => { // onSuccess
+                    if (!(value.data instanceof AuthenticationTicket)) {
+                        throw new Error("Principal must be initialized with an instance of AuthenticationTicket.");
+                    }
+                    const ticket = value.data;
+
                     // Actualiza el estado para reflejar que la sesión fue renovada exitosamente.
                     this.setState({
-                        user: new ApplicationUser(value.data),
+                        ticket: ticket,
+                        user: ticket.principal,
                         isValidating: false
                     });
                     console.info("[Authentication] Token renovado exitosamente.");
@@ -293,8 +325,9 @@ class Authentication extends React.Component {
                     // Manejo de errores: actualiza el estado y muestra un mensaje en la consola.
                     console.error("[Authentication] Falló la renovación del token:", error);
                     this.setState({
+                        ticket: visitorTicket,
+                        user: visitorTicket.principal,
                         isValidating: false,
-                        user: new ApplicationUser({})
                     }, () => {
                         ctx.router.navigate(options.loginPage); // Redirigir a la página de login si falla la renovación
                     });
@@ -307,52 +340,6 @@ class Authentication extends React.Component {
                 isValidating: false
             });
             return false;
-        }
-    }
-
-    /**
-     * Método determina el estado de expiración
-     * @method
-     * @name isTokenNearExpiry
-     * @returns {boolean} - Un estado que indica si el toeken esta cerca de expirar.
-     */
-    isTokenNearExpiry(withLog = false) {
-        withLog && console.log('[Authentication] isTokenNearExpiry');
-        // Extrae el usuario desde el estado del componente.
-        const { user } = this.state;
-
-        // Si no hay información de usuario o fecha de expiración, asumimos que no hay sesión válida.
-        if (!user || !user.expiresIn) {
-            console.warn("[Authentication] No hay información de usuario o fecha de expiración.");
-            return true; // Consideramos que el token está expirado o no existe
-        }
-
-        try {
-            // 1. Convertir la cadena de fecha (ej. "2025-05-23T14:30:00.000Z")
-            // a un objeto Date y obtener el timestamp en milisegundos.
-            const expirationDate = new Date(user.expiresIn);
-            const expirationTime = expirationDate.getTime(); // Timestamp en milisegundos
-
-            const currentTime = Date.now(); // Tiempo actual en milisegundos
-
-            // 2. Definir un margen de tiempo (umbral) antes de la expiración
-            // para intentar la renovación. Por ejemplo, 5 minutos.
-            const REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutos en milisegundos
-
-            // 3. Verificar si el tiempo restante hasta la expiración es menor o igual que nuestro umbral.
-            const timeLeft = expirationTime - currentTime;
-            const isNearExpiry = timeLeft <= REFRESH_THRESHOLD_MS;
-
-            if (isNearExpiry) {
-                withLog && console.log(`[Authentication] Sesión expirará en ~${formatTimeLeft(timeLeft)} minutos. Cerca de expirar.`);
-            } else {
-                withLog && console.log(`[Authentication] Sesión válida por ~${formatTimeLeft(timeLeft)} minutos.`);
-            }
-
-            return isNearExpiry;
-        } catch (error) {
-            console.error("[Authentication] Error al procesar la fecha de expiración:", error);
-            return true; // Si hay un error, asumimos que la sesión no es válida
         }
     }
 
@@ -370,7 +357,7 @@ class Authentication extends React.Component {
         // Extrae el proveedor de autenticación de las propiedades del componente.
         const { provider: authProvider, ctx } = this.props;
         // Extrae opciones de autenticación desde el estado del componente.
-        const { options, isValidating } = this.state;
+        const { options } = this.state;
 
         // Intenta realizar el cierre de la sesión con el proveedor de autenticación.
         const result = await authProvider.logout(options.logoutPath);
@@ -379,8 +366,9 @@ class Authentication extends React.Component {
             (value) => { // onSuccess
                 // Actualiza el estado para reflejar una cierre de sesión exitoso.
                 this.setState({
+                    ticket: visitorTicket,
+                    user: visitorTicket.principal,
                     isValidating: false,
-                    user: new ApplicationUser({})
                 }, () => {
                     ctx.router.navigate(options.loginPage);
                 });
@@ -394,18 +382,14 @@ class Authentication extends React.Component {
         );
     }
 
-    renderTimeLeft() {
-        const { user } = this.state;
-
-        return h({
-            type: TimeLeft,
-            props: {
-                targetTime: user?.expiresIn,
-                onRefresh: this.refresh,
-                onExpiry: this.isTokenNearExpiry,
-                isRunning: user?.expiresIn || false
-            }
-        })
+    /**
+     * Método determina el estado de expiración
+     * @method
+     * @name isNearExpiry
+     * @returns {boolean} - Un estado que indica si el toeken esta cerca de expirar.
+     */
+    isNearExpiry(withLog = false) {
+        return this.state.ticket.isNearExpiry();
     }
 }
 

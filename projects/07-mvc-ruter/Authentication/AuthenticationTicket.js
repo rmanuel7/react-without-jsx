@@ -1,3 +1,4 @@
+import AuthenticationProperties from './AuthenticationProperties.js';
 import ClaimsPrincipal from './ClaimsPrincipal.js';
 import Identity from './Identity.js'; // También necesitarías Identity
 
@@ -67,43 +68,48 @@ class AuthenticationTicket {
     }
 
     /**
-     * Crea una representación serializable del ticket.
-     * Ideal para almacenar el ticket en el almacenamiento local o en una cookie.
-     * @returns {object} Un objeto simple que contiene datos del principal y propiedades.
+     * Determina si el ticket de autenticación está cerca de expirar o ya expiró.
+     * La verificación se realiza utilizando la propiedad `ExpiresUtc` de las `AuthenticationProperties`
+     * asociadas a este ticket.
+     *
+     * @method
+     * @param {number} [thresholdMinutes=5] - El umbral en minutos para considerar que el ticket está "cerca" de expirar.
+     * @param {boolean} [withLog=false] - Si es `true`, imprimirá mensajes de log en la consola.
+     * @returns {boolean} `true` si el ticket está cerca de expirar o ya expiró; `false` en caso contrario.
      */
-    toObject() {
-        return {
-            principal: this.#principal.toObject(), // Asume que ClaimsPrincipal tiene un toObject()
-            properties: {
-                issuedUtc: this.#properties.issuedUtc?.toISOString(),
-                expiresUtc: this.#properties.expiresUtc?.toISOString(),
-                isPersistent: this.#properties.isPersistent,
-                authenticationScheme: this.#properties.authenticationScheme
-            }
-        };
-    }
+    isNearExpiry(thresholdMinutes = 5, withLog = false) {
+        withLog && console.log('[AuthenticationTicket] isNearExpiry');
 
-    /**
-     * Crea una instancia de AuthenticationTicket a partir de un objeto serializado.
-     * @param {object} obj - El objeto serializado.
-     * @param {object} obj.principal - El objeto principal serializado.
-     * @param {object} obj.properties - El objeto de propiedades serializado.
-     * @returns {AuthenticationTicket} Una nueva instancia de AuthenticationTicket.
-     */
-    static fromObject(obj) {
-        if (!obj || !obj.principal || !obj.properties) {
-            throw new Error('El objeto serializado no tiene la estructura correcta para AuthenticationTicket.');
+        const { expiresUtc } = this.#properties;
+
+        // Si no hay fecha de expiración en las propiedades, asumimos que no hay sesión válida o es infinita.
+        if (!expiresUtc instanceof Date || isNaN(expiresUtc.getTime())) {
+            console.warn("[AuthenticationTicket] No hay una fecha de expiración válida (Properties.ExpiresUtc).");
+            return true; // Consideramos que el ticket está expirado o no existe una expiración definible.
         }
 
-        const principal = ClaimsPrincipal.fromObject(obj.principal); // Asume que ClaimsPrincipal tiene un fromObject()
-        const properties = new AuthenticationProperties({
-            issuedUtc: obj.properties.issuedUtc ? new Date(obj.properties.issuedUtc) : null,
-            expiresUtc: obj.properties.expiresUtc ? new Date(obj.properties.expiresUtc) : null,
-            isPersistent: obj.properties.isPersistent,
-            authenticationScheme: obj.properties.authenticationScheme
-        });
+        try {
+            const expirationTime = expiresUtc.getTime(); // Timestamp en milisegundos
+            const currentTime = Date.now(); // Tiempo actual en milisegundos
 
-        return new AuthenticationTicket(principal, properties);
+            const REFRESH_THRESHOLD_MS = thresholdMinutes * 60 * 1000; // Umbral en milisegundos
+
+            const timeLeft = expirationTime - currentTime;
+            const isNearExpiry = timeLeft <= REFRESH_THRESHOLD_MS;
+
+            if (withLog) {
+                if (isNearExpiry) {
+                    console.log(`[AuthenticationTicket] Ticket expirará en ~${formatTimeLeft(timeLeft)}. Cerca de expirar.`);
+                } else {
+                    console.log(`[AuthenticationTicket] Ticket válido por ~${formatTimeLeft(timeLeft)}.`);
+                }
+            }
+
+            return isNearExpiry;
+        } catch (error) {
+            console.error("[AuthenticationTicket] Error al procesar la fecha de expiración:", error);
+            return true; // Si hay un error, asumimos que el ticket no es válido
+        }
     }
 }
 

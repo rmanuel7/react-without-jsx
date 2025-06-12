@@ -1,6 +1,7 @@
-import { 
-    isRoute,
+import {
     isController,
+    isLayout,
+    isView,
     isAuthorize,
     isAllowAnonymous
 } from '../Shared/IsType.js';
@@ -97,65 +98,86 @@ function matchRoute(children, currentLocationPath, basePath = "", currentContext
     for (const child of React.Children.toArray(children)) {
         if (!React.isValidElement(child)) continue;
 
-        const { type, props } = child;
+        const { props } = child;
+        const { path = '', index, element: RouteElement, children, ...resProps } = props;
+        const { type } = RouteElement;
+        // --- MANEJO DE WRAPPERS/DECLARADORES DE CONTEXTO ---
 
+        // Authorize / AllowAnonymous: Declara requisitos de autorización
         if (isAuthorize(type) || isAllowAnonymous(type)) {
             const authorizationDescriptor = {
                 type: isAuthorize(type) ? 'authorize' : 'allowAnonymous',
-                config: props
+                config: resProps
             };
             const newContextValues = { ...currentContextValues, authorization: authorizationDescriptor };
 
             const res = matchRoute(
-                React.Children.toArray(props.children),
+                React.Children.toArray(children),
                 currentLocationPath,
                 basePath,
                 newContextValues
             );
             if (res) return res;
         }
+
+        // Layout (si lo usas como un wrapper de ruta explícito)
         else if (isLayout(type)) {
-            const { element: layoutComponent, ...resProps } = props;
-            const newContextValues = { ...currentContextValues, layout: { element: layoutComponent, resProps } };
+            const newContextValues = { ...currentContextValues, layout: { element: RouteElement, props: resProps } };
 
             const res = matchRoute(
-                React.Children.toArray(props.children),
+                React.Children.toArray(children),
                 currentLocationPath,
                 basePath,
                 newContextValues
             );
             if (res) return res;
         }
+
+        // Controller: Actualiza basePath y puede proveer ControllerContext
         else if (isController(type)) {
             // Construir la ruta completa combinando la base heredada con la ruta actual.
             const newBasePath = normalizePath(
-                props.path.startsWith('/') ? props.path : `${basePath}/${props.path}`
+                path.startsWith('/') ? path : `${basePath}/${path}`
             );
-            const controllerInfo = { type, props, path: newBasePath };
+            const controllerInfo = { element: RouteElement, props: resProps, path: newBasePath };
             const routeMatchInfo = { ...currentContextValues.routeMatch, controller: controllerInfo };
 
             const newContextValues = { ...currentContextValues, routeMatch: routeMatchInfo };
 
             const res = matchRoute(
-                React.Children.toArray(props.children),
+                React.Children.toArray(children),
                 currentLocationPath,
                 newBasePath,
                 newContextValues
             );
             if (res) return res;
         }
-        else if (isRoute(type)) {
-            const routePath = normalizePath(
-                props.path.startsWith('/') ? props.path : `${basePath}/${props.path}`
-            );
-            const params = matchPath(routePath, currentLocationPath);
 
-            if (params) {
+        // Route: Intenta hacer match final y define pageComponent y pageProps
+        else if (isView(type)) {
+            // Construir la ruta completa combinando la base heredada con la ruta actual.
+            const routePath = normalizePath(
+                path.startsWith('/') ? path : `${basePath}/${path}`
+            );
+
+            // Intentar coincidir con la URL actual.
+            const params = matchPath(routePath, normalizePath(currentLocationPath));
+
+            // Coincidencia exacta (incluye index route con path vacío)
+            const isExactMatch = params && (
+                normalizePath(currentLocationPath) === normalizePath(
+                    routePath.replace(/:([a-zA-Z0-9_]+)/g, (_, key) => params[key])
+                )
+            );
+
+            // Si es una coincidencia exacta, devolvemos directamente
+            if (isExactMatch) {
                 const { routeMatch: currentRouteMatch } = currentContextValues;
 
                 const actionInfo = {
                     path: currentLocationPath,
-                    props: props,
+                    element: RouteElement,
+                    props: resProps,
                     fromRoute: params,
                 };
 

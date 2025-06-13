@@ -1,11 +1,8 @@
-import AuthContext from './AuthContext.js';
 import { createReactElement as h } from '../Shared/ReactFunctions.js';
-
-/**
- * @typedef {object} AuthContextProps
- * @property {object} auth - El objeto de autenticación proporcionado por AuthContext.
- * Contiene propiedades como isAuthenticated, identity, claims, etc.
- */
+import createMvcContext from '../Utils/createMvcContext.js';
+import RequestContext from '../Router/RequestContext.js';
+import RouterContext from '../Router/RouterContext.js';
+import AuthContext from './AuthContext.js';
 
 /**
  * Un componente de orden superior (HOC) que inyecta el contexto de autenticación
@@ -33,16 +30,40 @@ function withAuth(Component) {
          * @returns {React.ReactElement} El componente envuelto con el prop 'auth'.
          */
         render() {
+            // Se suscribe a RouterContext para obtener la información global del router.
+            // RouterContext.Consumer devuelve { location: LocationInstance }
             return h({
-                type: AuthContext.Consumer,
-                props: { },
-                children: [
-                    auth => h({
-                        type: Component,
-                        props: {
-                            ...this.props, // Pasa todos los props originales al componente envuelto
-                            auth: auth    // Inyecta el objeto 'auth' del contexto
-                        }
+                type: RouterContext.Consumer,
+                props: {},
+                children: [routerCtxValue =>
+                    // Se suscribe a RequestContext para obtener la información global del request.
+                    // RequestContext.Consumer devuelve RequestContextValueInstance (el objeto RequestContextValue)
+                    h({
+                        type: RequestContext.Consumer,
+                        props: {},
+                        children: [requestCtxValue =>
+                            // Se suscribe a AuthContext para obtener la información global del auth.
+                            h({
+                                type: AuthContext.Consumer,
+                                props: {},
+                                children: [authCtxValue =>
+                                    // El componente al que se le inyectará el contexto del auth.
+                                    h({
+                                        type: Component,
+                                        props: {
+                                            ...this.props, // Pasa todos los props originales al componente envuelto
+                                            // Consolida los contextos en la prop `ctx`
+                                            // Asegúrate de que createMvcContext reciba los argumentos correctos.
+                                            ctx: createMvcContext({
+                                                router: routerCtxValue, // Pasar el objeto completo del RouterContextValue
+                                                requst: requestCtxValue, // Pasar la instancia completa de RequestContextValue,
+                                                auth: authCtxValue // Inyecta el objeto 'auth' del contexto
+                                            }),
+                                        }
+                                    })
+                                ]
+                            })
+                        ]
                     })
                 ]
             });

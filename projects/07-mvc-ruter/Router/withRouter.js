@@ -1,7 +1,7 @@
-import { createReactElement as h } from './ReactFunctions.js';
+import { createReactElement as h } from '../Shared/ReactFunctions.js';
 import createMvcContext from '../Utils/createMvcContext.js';
-import RequestContext from '../Router/RequestContext.js';
-import RouterContext from '../Router/RouterContext.js';
+import RequestContext from './RequestContext.js';
+import RouterContext from './RouterContext.js';
 
 /**
  * High Order Component (HOC) que inyecta el contexto del Router

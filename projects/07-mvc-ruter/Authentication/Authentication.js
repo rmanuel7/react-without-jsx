@@ -329,7 +329,7 @@ class Authentication extends React.Component {
                         user: visitorTicket.principal,
                         isValidating: false,
                     }, () => {
-                        ctx.router.navigate(options.loginPage); // Redirigir a la página de login si falla la renovación
+                        ctx.spa.navigate(options.loginPage); // Redirigir a la página de login si falla la renovación
                     });
                     return false;
                 }
@@ -370,7 +370,7 @@ class Authentication extends React.Component {
                     user: visitorTicket.principal,
                     isValidating: false,
                 }, () => {
-                    ctx.router.navigate(options.loginPage);
+                    ctx.spa.navigate(options.loginPage);
                 });
                 console.info("[Authentication] Cierre de sesión exitoso.");
                 return Result.success(true);

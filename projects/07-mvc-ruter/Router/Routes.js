@@ -9,7 +9,7 @@
 import { MVCROUTER_ROUTES_TYPE } from '../Shared/MvcSymbols.js';
 import { createReactElement as h } from '../Shared/ReactFunctions.js';
 import { cloneReactElement as o } from '../Shared/ReactFunctions.js';
-import withRouter from '../Shared/withRouter.js';
+import withRouter from './withRouter.js';
 import Authorization from '../Authorization/Authorization.js';
 import AuthzContext from '../Authorization/AuthzContext.js';
 import ActionContext from '../Controllers/ActionContext.js';

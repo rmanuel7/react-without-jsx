@@ -354,6 +354,66 @@ class RequestContextValue {
             routeValues: additionalOptions.routeValues || {}
         });
     }
+
+    /**
+     * Crea una nueva instancia de RequestContextValue a partir de una instancia existente,
+     * permitiendo sobrescribir propiedades específicas.
+     *
+     * Este método es útil para crear una versión modificada del contexto de solicitud
+     * sin mutar la instancia original (debido a la inmutabilidad de la clase).
+     *
+     * @static
+     * @param {RequestContextValue} baseContext - La instancia de RequestContextValue base de la cual clonar.
+     * @param {object} changes - Un objeto que contiene las propiedades que se desean sobrescribir.
+     * @param {string} [changes.method] - Nuevo método HTTP.
+     * @param {string} [changes.scheme] - Nuevo esquema URI.
+     * @param {boolean} [changes.isHttps] - Nuevo valor para HTTPS.
+     * @param {HostString | string | object} [changes.host] - Nuevo host.
+     * @param {PathString | string} [changes.pathBase] - Nueva ruta base.
+     * @param {PathString | string} [changes.path] - Nueva ruta.
+     * @param {QueryString | string} [changes.queryString] - Nueva cadena de consulta.
+     * @param {IQueryCollection} [changes.query] - Nuevos parámetros de consulta.
+     * @param {string} [changes.protocol] - Nuevo protocolo.
+     * @param {IHeaderDictionary} [changes.headers] - Nuevos encabezados.
+     * @param {IRequestCookieCollection} [changes.cookies] - Nuevas cookies.
+     * @param {number | null} [changes.contentLength] - Nueva longitud del contenido.
+     * @param {string | null} [changes.contentType] - Nuevo tipo de contenido.
+     * @param {boolean} [changes.hasFormContentType] - Nuevo valor para tipo de formulario.
+     * @param {IFormCollection | null} [changes.form] - Nuevos datos del formulario.
+     * @param {RouteValueDictionary} [changes.routeValues] - Nuevos valores de ruta.
+     * @returns {RequestContextValue} Una nueva instancia de RequestContextValue con las propiedades actualizadas.
+     */
+    static with(baseContext, changes) {
+        if (!(baseContext instanceof RequestContextValue)) {
+            throw new Error('El primer argumento de RequestContextValue.with debe ser una instancia de RequestContextValue.');
+        }
+
+        // Combinar todas las propiedades de la instancia base
+        const currentOptions = {
+            method: baseContext.method,
+            scheme: baseContext.scheme,
+            isHttps: baseContext.isHttps,
+            host: baseContext.host,
+            pathBase: baseContext.pathBase,
+            path: baseContext.path,
+            queryString: baseContext.queryString,
+            query: baseContext.query,
+            protocol: baseContext.protocol,
+            headers: baseContext.headers,
+            cookies: baseContext.cookies,
+            contentLength: baseContext.contentLength,
+            contentType: baseContext.contentType,
+            hasFormContentType: baseContext.hasFormContentType,
+            form: baseContext.form,
+            routeValues: baseContext.routeValues,
+        };
+
+        // Sobrescribir con los cambios proporcionados
+        const newOptions = { ...currentOptions, ...changes };
+
+        // Crear una nueva instancia con las opciones combinadas
+        return new RequestContextValue(newOptions);
+    }
 }
 
 export default RequestContextValue;

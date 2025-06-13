@@ -1,7 +1,10 @@
+import { deepCompare } from '../Utils/deepCompare.js';
 import { createReactElement as h} from '../Shared/ReactFunctions.js';
-import deepCompare from '../Shared/deepCompare.js';
 import RouterContext from './RouterContext.js';
-import parseQueryParams from './parseQueryParams.js';
+import RequestContext from './RequestContext.js';
+import RequestContextValue from './RequestContextValue.js';
+import Location from './Location.js';
+
 
 /**
  * Componente Router que gestiona el enrutamiento de la aplicación.
@@ -10,6 +13,7 @@ import parseQueryParams from './parseQueryParams.js';
  * un contexto para la navegación y los datos de la ruta actual.
  */
 class Router extends React.Component {
+
     // =========================================================================
     //                            MOUNTING SECTION
     // =========================================================================
@@ -38,10 +42,10 @@ class Router extends React.Component {
 
         /** @type {RouterState} */
         this.state = {
-            path: this.#getRelativePath(window.location.pathname),
-            stateData: window.history.state,
-            params: {},
-            query: parseQueryParams(window.location.search)
+            req: RequestContextValue.fromWindowLocation({
+                pathBase: this.pathBase,
+                path: this.#getRelativePath(fullPath),
+            })
         };
 
         this.handlePopState = this.handlePopState.bind(this);
@@ -62,22 +66,26 @@ class Router extends React.Component {
     render() {
         console.info('[Router] render');
         const { children } = this.props;
-        const { path, stateData, params, query } = this.state;
 
-        /** @type {RouterContextValue} */
-        const routerContextValue = {
-            location: path,
-            stateData,
-            params,
-            query,
-            navigate: this.navigate,
-            replace: this.replace
-        };
+        // Instanciamos Location aquí, pasándole las funciones bindeadas correctamente
+        // que manipulan window.history y luego actualizan el estado del router.
+        const locationInstance = new Location({
+            pushStateFn: this.navigate,
+            replaceStateFn: this.replace
+        });
 
         return h({
             type: RouterContext.Provider,
-            props: { value: routerContextValue },
-            children: children
+            // El valor de RouterContext.Provider es un objeto que contiene la instancia de Location
+            props: { value: { location: locationInstance } },
+            children: [
+                h({
+                    type: RequestContext.Provider,
+                    // El valor de RequestContext.Provider es directamente la instancia de RequestContextValue
+                    props: { value: this.state.req }, // this.state.req ya es una instancia de RequestContextValue
+                    children: children
+                })
+            ]
         });
     }
 
@@ -199,16 +207,20 @@ class Router extends React.Component {
      * @returns {void}
      */
     updateLocation() {
-        const fullPath = window.location.pathname;
-        const relativePath = this.#getRelativePath(fullPath);
-        const query = parseQueryParams(window.location.search);
-        const stateData = window.history.state;
+        const stateDataInfo = window.history.state;
+
+        const currentRequestContext = RequestContextValue.fromWindowLocation({
+            pathBase: this.pathBase,
+            // El `relativePath` específicamente, puedes derivarlo del `.path`.
+            path: this.#getRelativePath(fullPath),
+            contentLength: stateDataInfo?.contentLength,
+            contentType: stateDataInfo?.contentType,
+            hasFormContentType: stateDataInfo?.hasFormContentType,
+            form: stateDataInfo?.form,
+        });
 
         this.setState({
-            path: relativePath,
-            stateData,
-            params: {}, // Se puede llenar mediante lógica de rutas adicional
-            query
+            req: currentRequestContext
         });
     }
 
@@ -272,7 +284,6 @@ class Router extends React.Component {
         const cleanRelativePath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
         return `${this.basePath}/${cleanRelativePath}`.replace(/\/\/+/g, '/'); // Limpiar posibles dobles barras
     }
-
 }
 
 export default Router;

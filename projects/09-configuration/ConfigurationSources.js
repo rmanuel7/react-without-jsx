@@ -1,5 +1,6 @@
 ﻿import ConfigurationSource from './abstraction/ConfigurationSource.js';
 import ConfigurationManager from './ConfigurationManager.js';
+import ConfigurationSymbols from './internal/ConfigurationSymbols.js';
 
 /**
  * ConfigurationSources
@@ -10,8 +11,36 @@ import ConfigurationManager from './ConfigurationManager.js';
  * Inspirado en Microsoft.Extensions.Configuration.ConfigurationSources.
  *
  * Permite acceso indexado (como sources[0]) usando un Proxy.
+ *
+ * @example
+ * const sources = new ConfigurationSources(configManager);
+ * sources.add(new MemoryConfigurationSource({ ... }));
+ * for (const src of sources) { ... }
  */
 class ConfigurationSources {
+/**
+     * Identificador simbólico para DI.
+     * @returns {symbol}
+     */
+    static get __typeof() {
+        return ConfigurationSymbols.configurationSources;
+    }
+
+    /**
+     * Metadatos para el contenedor DI.
+     * @returns {object}
+     */
+    static get __metadata() {
+        return {
+            provides: [
+                this.__typeof
+            ],
+            inject: {
+                config: ConfigurationManager
+            }
+        };
+    }
+
     /**
      * @type {Array<ConfigurationSource>}
      * @private

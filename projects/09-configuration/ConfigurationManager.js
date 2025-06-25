@@ -1,6 +1,7 @@
 ﻿import ConfigurationSources from './ConfigurationSources.js';
 import ConfigurationSource from './abstraction/ConfigurationSource.js';
 import ConfigurationProvider from './abstraction/ConfigurationProvider.js';
+import ConfigurationSymbols from './internal/ConfigurationSymbols.js';
 
 /**
  * ConfigurationManager
@@ -8,6 +9,12 @@ import ConfigurationProvider from './abstraction/ConfigurationProvider.js';
  * 
  * Inspirado en Microsoft.Extensions.Configuration.ConfigurationManager.
  * Permite agregar fuentes de configuración y acceder a los valores consolidados.
+ *
+ * @example
+ * import ConfigurationManager from './ConfigurationManager.js';
+ * const config = new ConfigurationManager();
+ * config.sources.add(new SomeConfigurationSource());
+ * const value = config.get('my:key');
  */
 class ConfigurationManager {
     /**
@@ -15,7 +22,18 @@ class ConfigurationManager {
      * @returns {symbol}
      */
     static get __typeof() {
-        return Symbol.for('softlib.spawebcore.configuration.configurationmanager');
+        return ConfigurationSymbols.configurationManager;
+    }
+
+    /**
+     * Metadatos para el contenedor DI.
+     * @returns {object}
+     */
+    static get __metadata() {
+        return {
+            provides: [this.__typeof],
+            inject: {}
+        };
     }
 
     /** @type {ConfigurationSources} */

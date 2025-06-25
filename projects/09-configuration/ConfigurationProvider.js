@@ -7,8 +7,17 @@
  * 
  * Un proveedor de configuración expone claves/valores de configuración,
  * puede recargar, y (opcionalmente) soporta escritura o notifica cambios.
+ *
+ * @example
+ * // Clase derivada
+ * class MemoryConfigurationProvider extends ConfigurationProvider {
+ *   constructor(source) {
+ *     super();
+ *     // inicialización...
+ *   }
+ *   // ...
+ * }
  */
-
 class ConfigurationProvider {
     /**
      * Diccionario interno de claves/valores de configuración.
@@ -20,10 +29,8 @@ class ConfigurationProvider {
 
     /**
      * Crea un nuevo ConfigurationProvider.
-     * Si la implementación requiere opciones, pásalas aquí.
-     * @param {object} [options]
      */
-    constructor(options = {}) {
+    constructor() {
         if (new.target === ConfigurationProvider) {
             throw new TypeError('Cannot instantiate abstract class ConfigurationProvider directly.');
         }

@@ -7,6 +7,13 @@ import MemoryConfigurationSource from './MemoryConfigurationSource.js';
  * 
  * Proveedor concreto que almacena los datos en memoria (RAM).
  * Permite lectura y escritura.
+ *
+ * @example
+ * import MemoryConfigurationSource from './MemoryConfigurationSource.js';
+ * import MemoryConfigurationProvider from './MemoryConfigurationProvider.js';
+ * const source = new MemoryConfigurationSource({ foo: 'bar' });
+ * const provider = new MemoryConfigurationProvider(source);
+ * provider.tryGet('foo'); // { found: true, value: 'bar' }
  */
 class MemoryConfigurationProvider extends ConfigurationProvider {
     /**

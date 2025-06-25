@@ -15,6 +15,13 @@
  * 
  * Cada fuente debe implementar el método build(configurationBuilder), que devuelve
  * una instancia de ConfigurationProvider.
+ * 
+ * @example
+ * class CustomSource extends ConfigurationSource {
+ *   build(configurationBuilder) {
+ *     return new CustomProvider(this);
+ *   }
+ * }
  */
 class ConfigurationSource {
     /**

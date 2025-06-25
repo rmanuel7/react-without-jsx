@@ -7,6 +7,12 @@ import MemoryConfigurationProvider from './MemoryConfigurationProvider.js';
  * 
  * Fuente de configuración basada en memoria.
  * Permite definir un diccionario inicial de claves/valores.
+ *
+ * @example
+ * import MemoryConfigurationSource from './MemoryConfigurationSource.js';
+ * const source = new MemoryConfigurationSource({ foo: 'bar' });
+ * const provider = source.build(configurationManager);
+ * provider.tryGet('foo'); // { found: true, value: 'bar' }
  */
 class MemoryConfigurationSource extends ConfigurationSource {
     /**

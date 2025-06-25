@@ -1,4 +1,4 @@
-import ConfigurationSources from './ConfigurationSources.js';
+﻿import ConfigurationSources from './ConfigurationSources.js';
 import ConfigurationSource from './abstraction/ConfigurationSource.js';
 import ConfigurationProvider from './abstraction/ConfigurationProvider.js';
 

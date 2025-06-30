@@ -38,36 +38,6 @@ class OptionSymbols extends SpaJsCoreSymbols {
     static get configureOptions() {
         return Symbol.for(`${Symbol.keyFor(this.package)}.configure_options`);
     }
-
-    /**
-     * Devuelve el símbolo concreto Options<T> para un tipo dado.
-     * @param {Function} optionClass - Definición de clase/constructor para las opciones tipadas.
-     * @returns {symbol}
-     */
-    static forType(optionClass) {
-        if (!optionClass || !optionClass.prototype || typeof optionClass !== 'function') {
-            throw new TypeError('optionClass debe ser una clase/constructor.');
-        }
-        if (typeof optionClass.__typeof === 'undefined') {
-            throw new Error('ServiceDescriptor: optionClass debe definir static get __typeof().');
-        }
-        return Symbol.for(`${Symbol.keyFor(this.options)}<${Symbol.keyFor(optionClass.__typeof)}>`);
-    }
-
-    /**
-     * Devuelve el símbolo concreto Options<T> para un tipo dado.
-     * @param {Function} optionClass - Definición de clase/constructor para las opciones tipadas.
-     * @returns {symbol}
-     */
-    static forConfigureType(optionClass) {
-        if (!optionClass || !optionClass.prototype || typeof optionClass !== 'function') {
-            throw new TypeError('optionClass debe ser una clase/constructor.');
-        }
-        if (typeof optionClass.__typeof === 'undefined') {
-            throw new Error('ServiceDescriptor: optionClass debe definir static get __typeof().');
-        }
-        return Symbol.for(`${Symbol.keyFor(this.configureOptions)}<${Symbol.keyFor(optionClass.__typeof)}>`);
-    }
 }
 
 export default OptionSymbols;

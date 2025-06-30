@@ -28,13 +28,24 @@ class OptionsServiceCollectionExtensions {
      * @param {function (T): void} setupOptions - Función de configuración que recibe una instancia de T.
      */
     static addConfigureOptions(services, serviceClass, setupOptions) {
-        const __options = this.configureOptionsType(serviceClass);
-        this.addOptionsType(services, serviceClass);
+        // 1. Registrar el tipo de Options<T>
+        const __options = this.optionsType(serviceClass);
+        const metadata = ServiceMetadata.from(__options);
         services.add(new ServiceDescriptor({
             serviceType: __options.__typeof,
+            implementationType: Options,
+            lifetime: ServiceLifetime.singleton,
+            metadata: metadata
+        }));
+        // 2. Registrar el tipo de ConfigureOptions<T>
+        const __configureOptions = this.configureOptionsType(serviceClass);
+        services.add(new ServiceDescriptor({
+            serviceType: __configureOptions.__typeof,
             implementationInstance: new ConfigureOptions({ action: setupOptions }),
             lifetime: ServiceLifetime.singleton
         }));
+        // 3. Registrar la instancia de Options
+        ServiceCollectionServiceExtensions.addSingletonType(services, serviceClass);
     }
 
     /**
@@ -44,6 +55,7 @@ class OptionsServiceCollectionExtensions {
      * @param {T} serviceClass
      */
     static addOptionsType(services, serviceClass) {
+        // 1. Registrar el tipo de Options<T>
         const __options = this.optionsType(serviceClass);
         const metadata = ServiceMetadata.from(__options);
         services.add(new ServiceDescriptor({
@@ -52,6 +64,13 @@ class OptionsServiceCollectionExtensions {
             lifetime: ServiceLifetime.singleton,
             metadata: metadata
         }));
+        // 2. Registrar el tipo de ConfigureOptions<T> con una acción vacía
+        services.add(new ServiceDescriptor({
+            serviceType: OptionSymbols.forConfigureType(serviceClass),
+            implementationInstance: new ConfigureOptions({ action: _ => {} }),
+            lifetime: ServiceLifetime.singleton
+        }));
+        // 3. Registrar la instancia de Options
         ServiceCollectionServiceExtensions.addSingletonType(services, serviceClass);
     }
 
@@ -101,7 +120,7 @@ class OptionsServiceCollectionExtensions {
                     inject: {
                         config: ConfigurationManager,
                         target: optionsClass,
-                        setup: this.configureOptionsType(optionsClass)
+                        setup: OptionsServiceCollectionExtensions.configureOptionsType(optionsClass)
                     }
                 };
             }

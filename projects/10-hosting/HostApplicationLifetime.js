@@ -1,5 +1,6 @@
-import { Logger } from "@spajscore/logging";
+import { Logger, LoggerFactory } from "@spajscore/logging";
 import HostingSymbols from "./HostingSymbols";
+import { CancellationToken, CancellationTokenSource } from "@spajscore/threading";
 
 /**
  * HostApplicationLifetime
@@ -29,121 +30,97 @@ class HostApplicationLifetime {
      */
     static get __metadata() {
         return {
-            provides: [HostApplicationLifetime.__typeof],
+            parameters: [],
+            properties: {},
             inject: {
-                logger: Logger
+                logger: HostingSymbols.makeTypeBySymbol(HostingSymbols.forTypeBySymbol(this.__typeof, Logger.__typeof))
             }
         };
     }
 
-    /** @type {Logger} */ #logger;
-    /** @type {Array<function():void>} */ #startedCallbacks;
-    /** @type {Array<function():void>} */ #stoppingCallbacks;
-    /** @type {Array<function():void>} */ #stoppedCallbacks;
-    /** @type {boolean} */ #isStarted;
-    /** @type {boolean} */ #isStopping;
-    /** @type {boolean} */ #isStopped;
+    /** @type {Logger<HostApplicationLifetime>} */ #logger;
+    /** @type {CancellationTokenSource} */ #startedSource = new CancellationTokenSource();
+    /** @type {CancellationTokenSource} */ #stoppingSource = new CancellationTokenSource();
+    /** @type {CancellationTokenSource} */ #stoppedSource = new CancellationTokenSource();
 
     /**
      * Inicializa los estados y listeners internos del ciclo de vida.
      * @param {object} deps - Dependencias necesarias para el ciclo de vida del host.
-     * @param {Logger} deps.logger - Logger para registrar eventos.
+     * @param {Logger<HostApplicationLifetime>} deps.logger - Logger para registrar eventos.
      */
     constructor({ logger }) {
+        if(!logger|| !(logger instanceof Logger)){
+            throw new Error('HostApplicationLifetime: logger debe ser una instancia de Logger');
+        }
+
         this.#logger = logger;
-        this.#startedCallbacks = [];
-        this.#stoppingCallbacks = [];
-        this.#stoppedCallbacks = [];
-        this.#isStarted = false;
-        this.#isStopping = false;
-        this.#isStopped = false;
     }
 
     /**
-     * Registra un callback para cuando la aplicación inicia.
-     * @param {function():void} callback
+     * Obtiene un CancellationToken que se cancela cuando la aplicación ha iniciado completamente.
+     * Análogo a IHostApplicationLifetime.ApplicationStarted.
+     * @returns {CancellationToken}
      */
-    onStarted(callback) {
-        if (typeof callback === 'function') {
-            this.#startedCallbacks.push(callback);
-        } else {
-            this.#logger.warn('onStarted callback debe ser una función');
+    get applicationStarted() {
+        return this.#startedSource.token;
+    }
+
+    /**
+     * Obtiene un CancellationToken que se cancela cuando la aplicación está a punto de detenerse.
+     * Análogo a IHostApplicationLifetime.ApplicationStopping.
+     * @returns {CancellationToken}
+     */
+    get applicationStopping() {
+        return this.#stoppingSource.token;
+    }
+
+    /**
+     * Obtiene un CancellationToken que se cancela cuando la aplicación se ha detenido por completo.
+     * Análogo a IHostApplicationLifetime.ApplicationStopped.
+     * @returns {CancellationToken}
+     */
+    get applicationStopped() {
+        return this.#stoppedSource.token;
+    }
+
+    /**
+     * Notifica que la aplicación está a punto de detenerse.
+     * Esto dispara el evento ApplicationStopping.
+     * Análogo a IHostApplicationLifetime.NotifyStopping().
+     */
+    stopApplication() {
+        if (!this.#stoppingSource.token.isCancellationRequested) {
+            this.#logger.info("[ApplicationLifetime] Application is stopping.");
+            this.#stoppingSource.cancel();
         }
     }
 
     /**
-     * Registra un callback para cuando la aplicación comienza a detenerse.
-     * @param {function():void} callback
+     * Notifica que la aplicación ha iniciado completamente.
+     * Esto dispara el evento ApplicationStarted.
+     * Análogo a IHostApplicationLifetime.NotifyStarted().
      */
-    onStopping(callback) {
-        if (typeof callback === 'function') {
-            this.#stoppingCallbacks.push(callback);
-        } else {
-            this.#logger.warn('onStopping callback debe ser una función');
+    notifyStarted() {
+        try {
+            this.#startedSource.cancel();
+            this.#logger.info("[ApplicationLifetime] Application has successfully started.");
+        } catch (error) {
+            // En C#, este método atrapa y no relanza excepciones.
+            // Lo mismo aquí para emular ese comportamiento.
+            this.#logger.error("[ApplicationLifetime] Error during NotifyStarted:", error);
         }
     }
 
     /**
-     * Registra un callback para cuando la aplicación ya se detuvo.
-     * @param {function():void} callback
+     * Notifica que la aplicación se ha detenido por completo.
+     * Esto dispara el evento ApplicationStopped.
+     * Análogo a IHostApplicationLifetime.NotifyStopped().
      */
-    onStopped(callback) {
-        if (typeof callback === 'function') {
-            this.#stoppedCallbacks.push(callback);
-        } else {
-            this.#logger.warn('onStopped callback debe ser una función');
+    notifyStopped() {
+        if (!this.#stoppedSource.token.isCancellationRequested) {
+            this.#logger.info("[ApplicationLifetime] Application has stopped.");
+            this.#stoppedSource.cancel();
         }
-    }
-
-    /**
-     * Marca la aplicación como iniciada y ejecuta los callbacks correspondientes.
-     */
-    start() {
-        if (this.#isStarted) return;
-        this.#isStarted = true;
-        for (const cb of this.#startedCallbacks) cb();
-    }
-
-    /**
-     * Marca la aplicación como comenzando a detenerse y ejecuta los callbacks correspondientes.
-     */
-    stop() {
-        if (this.#isStopping && this.#isStopped) return;
-        this.#isStopping = true;
-        for (const cb of this.#stoppingCallbacks) cb();
-    }
-
-    /**
-     * Marca la aplicación como detenida y ejecuta los callbacks correspondientes.
-     */
-    stopped() {
-        if (this.#isStopped) return;
-        this.#isStopped = true;
-        for (const cb of this.#stoppedCallbacks) cb();
-    }
-
-    /**
-     * Indica si la aplicación ha iniciado.
-     * @returns {boolean}
-     */
-    get isStarted() {
-        return this.#isStarted;
-    }
-
-    /**
-     * Indica si la aplicación se está deteniendo.
-     * @returns {boolean}
-     */
-    get isStopping() {
-        return this.#isStopping;
-    }
-
-    /**
-     * Indica si la aplicación ya se detuvo.
-     * @returns {boolean}
-     */
-    get isStopped() {
-        return this.#isStopped;
     }
 }
 

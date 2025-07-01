@@ -1,4 +1,4 @@
-﻿import ServiceLifetime from './abstractions/ServiceLifetime.js';
+import ServiceLifetime from './abstractions/ServiceLifetime.js';
 import ServiceDescriptor from './abstractions/ServiceDescriptor.js';
 import ServiceCollection from './abstractions/ServiceCollection.js';
 import ServiceScope from './ServiceScope.js';
@@ -85,15 +85,58 @@ class ServiceProvider {
      * @throws {Error} Si la clase no está registrada.
      */
     get(serviceClass) {
+        // Si es un Enumerable cerrado, devuelve array de instancias
+        if (this.#isEnumerableClosedType(serviceClass)) {
+            const descriptors = this.#findAllImplementationsForEnumerable(serviceClass);
+            return descriptors.map(desc => this.#resolveDescriptor(desc, desc.serviceType));
+        }
+
+        // Caso normal: uno solo
         const descriptor = this.#findDescriptor(serviceClass);
         if (!descriptor) {
             throw new Error(
                 `Servicio no registrado para: ${serviceClass && serviceClass.name ? serviceClass.name : String(serviceClass)}`
             );
         }
-
+        
         const cacheKey = this.#getCacheKey(serviceClass);
+        return this.#resolveDescriptor(descriptor, cacheKey);
+    }
 
+    /**
+     * Busca el descriptor que satisface la clase solicitada.
+     * Solo acepta clases, nunca símbolos.
+     *
+     * @private
+     * @param {Function} serviceClass
+     * @returns {Array<ServiceDescriptor|null>}
+     * @throws {TypeError} Si el argumento no es una clase (function).
+     * @throws {Error} Si la clase no define __typeof.
+     */
+    #findDescriptor(serviceClass) {
+         if (typeof serviceClass !== 'function') {
+            throw new TypeError(`ServiceProvider: 'serviceClass' debe ser una Clase (Function).`);
+        }
+        const typeKey = serviceClass.__typeof;
+        if (!typeKey) {
+            throw new Error(
+                `La clase ${serviceClass.name} debe definir un getter estático __typeof (ej: static get __typeof() { return Symbol.for('...'); })`
+            );
+        }
+        // Busca por serviceType principal o por provides
+        return this.#collection.descriptors.find(desc => desc.serviceType === typeKey) ?? null;
+    }
+
+    /**
+     * Devuelve la instancia adecuada para un descriptor,
+     * aplicando el ciclo de vida (singleton/transient).
+     * @template T
+     * @private
+     * @param {ServiceDescriptor} descriptor
+     * @param {symbol} serviceClass
+     * @returns {T}
+     */
+    #resolveDescriptor(descriptor, cacheKey) {
         switch (descriptor.lifetime) {
             case ServiceLifetime.singleton:
                 if (this.#singletonCache.has(cacheKey)) {
@@ -115,35 +158,30 @@ class ServiceProvider {
     }
 
     /**
-     * Busca el descriptor que satisface la clase solicitada.
-     * Solo acepta clases, nunca símbolos.
-     *
-     * @private
-     * @param {Function} serviceClass
-     * @returns {ServiceDescriptor|null}
-     * @throws {TypeError} Si el argumento no es una clase (function).
-     * @throws {Error} Si la clase no define __typeof.
+     * Busca todos los descriptores que implementan T (para Enumerable<T>).
+     * @param {Function} enumerableClass - Clase cerrada devuelta por EnumerableTemplate.forType(T)
+     * @returns {Array<ServiceDescriptor>}
      */
-    #findDescriptor(serviceClass) {
-        if (typeof serviceClass !== 'function') {
-            throw new TypeError(`ServiceProvider: 'serviceClass' debe ser una Clase (Function).`);
+    #findAllImplementationsForEnumerable(enumerableClass) {
+        if (typeof enumerableClass !== 'function') {
+            throw new TypeError(`ServiceProvider: 'enumerableClass' debe ser una Clase (Function).`);
         }
-        const typeKey = serviceClass.__typeof;
-        if (!typeKey) {
+        // 1. Detecta si es un "Enumerable cerrado"
+        const parameters = enumerableClass.__metadata?.parameters;
+        if (!Array.isArray(parameters) || parameters.length !== 1) {
             throw new Error(
-                `La clase ${serviceClass.name} debe definir un getter estático __typeof (ej: static get __typeof() { return Symbol.for('...'); })`
+                `La clase ${enumerableClass.name} debe definir un getter estático __metadata con parameters: [T]`
             );
         }
-        // Busca por serviceType principal o por provides
-        return this.#collection.descriptors.find(desc => {
-            // (Array.isArray(desc.metadata?.provides) && desc.metadata.provides.includes(typeKey))
-            if(Array.isArray(desc.metadata?.provides)) {
-                if(desc.metadata.provides.some(p => p === typeKey)) {
-                    return true;
-                }
-            }
-            return desc.serviceType === typeKey;
-        }) ?? null;
+        const elementType = parameters[0];
+        const typeKey = elementType.__typeof;
+        if (!typeKey) {
+            throw new Error(`El tipo de elemento debe definir __typeof`);
+        }
+        // 2. Busca todas las implementaciones de T (por símbolo)
+        return this.#collection.descriptors.filter(desc =>
+            Symbol.keyFor(desc.serviceType).endsWith(`: ${Symbol.keyFor(typeKey)}`)
+        );
     }
 
     /**
@@ -206,6 +244,15 @@ class ServiceProvider {
         }
 
         return deps;
+    }
+
+    /**
+     * 
+     * @param {*} type 
+     * @returns 
+     */
+    #isEnumerableClosedType(type) {
+        return Array.isArray(type?.__metadata?.parameters) && type.__metadata.parameters.length === 1;
     }
 
     /**

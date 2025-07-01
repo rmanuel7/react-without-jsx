@@ -18,11 +18,33 @@ import OptionSymbols from './internal/OptionSymbols.js';
  */
 class ConfigureOptionsTemplate {
     /**
+     * No instanciar directamente.
+     * Usar ConfigureOptionsTemplate.forType(T).
+     */
+    constructor() {
+        throw new Error('No se debe instanciar ConfigureOptionsTemplate directamente. Usa forType(T).');
+    }
+
+    /**
      * Devuelve una clase ConfigureOptions<T> específica para el tipo dado.
      * @param {T} optionsClass - Clase/constructor de opciones tipadas.
      * @returns {T}
      */
     static forType(optionsClass) {
+        if (!optionsClass || typeof optionsClass !== 'function' || !optionsClass.prototype) {
+            throw new TypeError('forType: optionsClass debe ser una clase/constructor.');
+        }
+        if (typeof optionsClass.__typeof !== 'symbol') {
+            throw new Error('forType: optionsClass debe definir static get __typeof().');
+        }
+
+        /**
+         * ConfigureOptions
+         * ================
+         * 
+         * clase ConfigureOptions tipado con metadatos DI
+         * @template T
+         */
         return class ConfigureOptions {
             /**
              * Identificador simbólico para DI.
@@ -39,6 +61,7 @@ class ConfigureOptionsTemplate {
             static get __metadata() {
                 return {
                     parameters: [optionsClass],
+                    properties: {},
                     inject: {}
                 };
             }

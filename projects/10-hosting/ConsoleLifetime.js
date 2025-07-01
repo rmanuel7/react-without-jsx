@@ -2,8 +2,8 @@ import HostingSymbols from './HostingSymbols';
 import HostApplicationLifetime from './HostApplicationLifetime.js';
 import HostOptions from './HostOptions.js';
 import HostEnvironment from './HostEnvironment.js';
-import { Logger } from '@spajscore/logging';
-import { LoggerFactory } from '@spajscore/logging';
+import { Logger, LoggerFactory } from '@spajscore/logging';
+import { CancellationToken } from '@spajscore/threading';
 
 /**
  * ConsoleLifetime
@@ -32,21 +32,15 @@ class ConsoleLifetime {
         return HostingSymbols.consoleLifetime;
     }
 
+
     /**
-     * Metadatos para el contenedor DI.
-     * Proporciona las dependencias necesarias para el ciclo de vida del host.
+     * Metadatos para inyección de dependencias.
      * @returns {object}
-     * @property {symbol[]} provides - Símbolos que indican qué servicios proporciona.
-     * @property {object} inject - Dependencias a inyectar.
-     * @property {object} inject.consoleLifetimeOptions - Opciones del ciclo de vida de la consola.
-     * @property {object} inject.environment - Entorno de ejecución.
-     * @property {object} inject.applicationLifetime - Ciclo de vida de la aplicación.
-     * @property {object} inject.hostOptions - Opciones del host.
-     * @property {object} inject.loggerFactory - Fábrica de loggers.
      */
     static get __metadata() {
         return {
-            provides: [ConsoleLifetime.__typeof],
+            parameters: [],
+            properties: {},
             inject: {
                 // consoleLifetimeOptions: ConsoleLifetimeOptions,
                 environment: HostEnvironment,
@@ -57,15 +51,19 @@ class ConsoleLifetime {
         };
     }
 
-    #consoleLifetimeOptions;
+    /** @type {function():void} */
+    #shutdownHandlerBound = _ => { };
+
+    /** @type {function():void} */
+    #applicationStartedRegistration = _ => { };
+    /** @type {function():void} */
+    #applicationStoppingRegistration = _ => { };
+
+    /** @type {ConsoleLifetimeOptions} */ #consoleLifetimeOptions;
     /** @type {HostEnvironment} */        #environment;
     /** @type {HostApplicationLifetime} */ #applicationLifetime;
     /** @type {HostOptions} */            #hostOptions;
     /** @type {Logger} */                 #logger;
-    /** @type {Array<function():void>} */ #sigintCallbacks;
-    /** @type {Array<function():void>} */ #sigtermCallbacks;
-    /** @type {function():void} */        #shutdownHandlerBound;
-    /** @type {boolean} */                #isStarted;
 
     /**
      * Inicializa los listeners y estado.
@@ -83,24 +81,81 @@ class ConsoleLifetime {
         hostOptions,
         loggerFactory
     }) {
+        if (!environment || !(environment instanceof HostEnvironment)) {
+            throw new Error('ConsoleLifetime: environment debe ser una instancia de HostEnvironment');
+        }
+        if (!applicationLifetime || !(applicationLifetime instanceof HostApplicationLifetime)) {
+            throw new Error('ConsoleLifetime: applicationLifetime debe ser una instancia de HostApplicationLifetime');
+        }
+        if (!hostOptions || !(hostOptions instanceof HostOptions)) {
+            throw new Error('ConsoleLifetime: hostOptions debe ser una instancia de HostOptions');
+        }
+        if (!loggerFactory || !(loggerFactory instanceof LoggerFactory)) {
+            throw new Error('ConsoleLifetime: loggerFactory debe ser una instancia de LoggerFactory');
+        }
         this.#consoleLifetimeOptions = consoleLifetimeOptions;
         this.#environment = environment;
         this.#applicationLifetime = applicationLifetime;
         this.#hostOptions = hostOptions;
         this.#logger = loggerFactory.createLogger(Symbol.keyFor(ConsoleLifetime.__typeof));
-        this.#sigintCallbacks = [];
-        this.#sigtermCallbacks = [];
-        this.#isStarted = false;
     }
 
     /**
-     * Inicia el ciclo de vida y se suscribe a eventos de consola.
+     * Inicia el monitoreo de las señales de apagado de la consola.
+     * Análogo a IHostLifetime.WaitForStartAsync() pero enfocado en iniciar el monitoreo.
+     * @param {CancellationToken} cancellationToken 
+     * @returns {Promise<void>}
      */
-    start() {
-        if (this.#isStarted) return;
-        this.#isStarted = true;
-        this.#applicationLifetime.onStarted(()=> this.#handleSigint());
+    async waitForStartAsync(cancellationToken) {
+        // Monitorear el evento de inicio de la aplicación para cuando el host llame a NotifyStarted
+        this.#applicationStartedRegistration = this.#applicationLifetime.applicationStarted.register(
+            state => {
+                if (state instanceof ConsoleLifetime) {
+                    state.#onApplicationStarted();
+                }
+            },
+            this
+        );
+        // Monitorear el evento de detención de la aplicación para cuando el host llame a StopApplication
+        this.#applicationStoppingRegistration = this.#applicationLifetime.applicationStopping.register(
+            state => {
+                if (state instanceof ConsoleLifetime) {
+                    state.#onApplicationStopping();
+                }
+            },
+            this
+        );
+
         this.#registerShutdownHandlers();
+
+        // Este método no "espera" a que el host inicie, solo configura los listeners.
+        // La espera de inicio la manejará el host principal (StartAsync).
+        // Podemos resolver inmediatamente aquí si no hay una espera explícita.
+        return Promise.resolve();
+    }
+
+    /**
+     * Lanza los mensajes que notifican el inicio de la aplicación.
+     * @description
+     * Monitorear el evento de inicio de la aplicación para cuando el host llame a NotifyStarted
+     * @private
+     */
+    #onApplicationStarted() {
+        // for (const cb of this.#sigintCallbacks) cb();
+        this.#logger.info('Application started. Press Ctrl+C to shut down.');
+        this.#logger.info('Hosting environment: {EnvName}', this.#environment.environmentName);
+        this.#logger.info('Content root path: {ContentRoot}', this.#environment.contentRootPath);
+    }
+
+    /**
+     * Lanza un mensajes indicando que la aplicación se detuvo.
+     * @description
+     * Monitorear el evento de detención de la aplicación para cuando el host llame a NotifyStopping
+     * @private
+     */
+    #onApplicationStopping() {
+        //for (const cb of this.#sigtermCallbacks) cb();
+        this.#logger.info('Application is shutting down...');
     }
 
     /**
@@ -111,45 +166,21 @@ class ConsoleLifetime {
     }
 
     /**
-     * Registra un callback para el evento SIGINT.
-     * @param {function():void} callback
+     * Detiene la suscripción a los eventos de consola.
      */
-    onSigint(callback) {
-        if (typeof callback === 'function') {
-            this.#sigintCallbacks.push(callback);
-        }
+    async stopAsync() {
+        // No hay nada que hacer aquí
+        return Promise.resolve();
     }
 
     /**
-     * Registra un callback para el evento SIGTERM.
-     * @param {function():void} callback
+     * Des-registra los handlers de shutdown previamente registrados.
      */
-    onSigterm(callback) {
-        if (typeof callback === 'function') {
-            this.#sigtermCallbacks.push(callback);
-        }
-    }
-
-    /**
-     * Interno: Llama a los callbacks de SIGINT.
-     * @private
-     */
-    #handleSigint() {
-        // for (const cb of this.#sigintCallbacks) cb();
-        this.#logger.info('Application started. Press Ctrl+C to shut down.');
-        this.#logger.info('Hosting environment: {EnvName}', this.#environment.environmentName);
-        this.#logger.info('Content root path: {ContentRoot}', this.#environment.contentRootPath);
-    }
-
-    /**
-     * Interno: Llama a los callbacks de SIGTERM.
-     * @private
-     */
-    #handleSigterm() {
-        //for (const cb of this.#sigtermCallbacks) cb();
-        this.#logger.info('Application is shutting down...');
+    dispose() {
         this.#unregisterShutdownHandlers();
-        this.#applicationLifetime.stopApplication();
+
+        this.#applicationStartedRegistration();
+        this.#applicationStoppingRegistration();
     }
 
     /**
@@ -161,10 +192,10 @@ class ConsoleLifetime {
      * @param {boolean} [opts.useBrowser] - Si se desea registrar handler de beforeunload en navegador
      */
     #registerShutdownHandlers() {
+        this.#shutdownHandlerBound = (e) => this.#applicationLifetime.stopApplication();
         // Node.js signals
         // Browser beforeunload
         if (typeof window !== 'undefined' && window.addEventListener && window.removeEventListener) {
-            this.#shutdownHandlerBound = (e) => this.#handleSigterm();
             window.addEventListener('beforeunload', this.#shutdownHandlerBound.bind(null, 'beforeunload'));
         }
     }
@@ -173,30 +204,14 @@ class ConsoleLifetime {
      * Des-registra los handlers de shutdown previamente registrados.
      * El usuario debe llamar esto antes de destruir la instancia.
      */
-   #unregisterShutdownHandlers() {
+    #unregisterShutdownHandlers() {
         // Node.js
-        
+
         // Browser
         if (typeof window !== 'undefined' && window.removeEventListener && this.#shutdownHandlerBound) {
             window.removeEventListener('beforeunload', this.#shutdownHandlerBound);
         }
         this.#shutdownHandlerBound = null;
-    }
-
-    /**
-     * Indica si el ciclo de vida está iniciado.
-     * @returns {boolean}
-     */
-    get isStarted() {
-        return this.#isStarted;
-    }
-
-    /**
-     * Cambia el estado de inicio.
-     * @param {boolean} value
-     */
-    set isStarted(value) {
-        this.#isStarted = !!value;
     }
 }
 

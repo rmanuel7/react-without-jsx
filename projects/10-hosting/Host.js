@@ -152,8 +152,8 @@ class Host {
 
             const exceptions = [];
             const EnumerableOfHosted = EnumerableTemplate.forType(HostingSymbols.makeTypeBySymbol(HostingSymbols.hostedService));
-            this.#hostedServices ??= this.#services.get(EnumerableOfHosted);
-            // this.#hostedLifecycleServices = GetHostLifecycles(_hostedServices);
+            this.#hostedServices ??= this.#services.get(EnumerableOfHosted) ?? [];
+            this.#hostedLifecycleServices = []; // GetHostLifecycles(_hostedServices);
             this.#hostStarting = true;
             const concurrent = this.#options.servicesStartConcurrently;
             const abortOnFirstException = !concurrent;
@@ -234,8 +234,8 @@ class Host {
             }
             else {
                 // Ensure hosted services are stopped in LIFO order
-                const reversedServices = this.#hostedServices.reverse();
-                const reversedLifetimeServices = this.#hostedLifecycleServices?.reverse();
+                const reversedServices = Array.isArray(this.#hostedServices) ? [...this.#hostedServices].reverse() : [];
+                const reversedLifetimeServices = Array.isArray(this.#hostedLifecycleServices) ? [...this.#hostedLifecycleServices].reverse() : [];
                 const concurrent = this.#options.servicesStopConcurrently;
 
                 // Call StoppingAsync().
@@ -271,7 +271,7 @@ class Host {
                 await this.#consoleLifetime.stopAsync(cancellationToken);
             }
             catch (ex) {
-                exceptions.Add(ex);
+                exceptions.push(ex);
             }
 
             this.#hostStopped = true;
@@ -296,7 +296,7 @@ class Host {
      * @param {Error[]} exceptions - Lista para acumular excepciones.
      * @param {function(T, CancellationToken): Promise<void>} operation - El método a ejecutar en cada servicio.
      */
-    async #foreachService(services, token, concurrent, abortOnFirstException, exceptions, operation) {
+    async #foreachService(services, token, concurrent = false, abortOnFirstException = false, exceptions = [], operation) {
         if (!services || services.length === 0) return;
         if (token.isCancellationRequested && exceptions.length === 0) {
             throw new Error('foreachService: la operación ya fue cancelada antes de ingresar', 'AbortError');

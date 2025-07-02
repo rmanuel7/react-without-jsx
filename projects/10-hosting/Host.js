@@ -143,9 +143,9 @@ class Host {
         }
 
         cancellationToken = internalCancellationTokenSource.token;
-        
+
         try {
-            // ConsoleLifetime se "inicia" configurando sus listeners.
+            // ConsoleLifetime se 'inicia' configurando sus listeners.
             await this.#consoleLifetime.waitForStartAsync(cancellationToken);
             // Verifica cancelación después de iniciar listeners
             cancellationToken.throwIfCancellationRequested();
@@ -163,31 +163,35 @@ class Host {
                 await this.#foreachService(this.#hostedLifecycleServices, cancellationToken, concurrent, abortOnFirstException, exceptions,
                     (service, token) => service.startingAsync(token)
                 );
+                // Exceptions in startingAsync cause startup to be aborted
+                this.#logAndRethrow(exceptions);
             }
 
             // Call StartAsync().
             await this.#foreachService(this.#hostedServices, cancellationToken, concurrent, abortOnFirstException, exceptions,
                 (service, token) => service.startAsync(token)
             );
+            // Exceptions in startAsync cause startup to be aborted
+            this.#logAndRethrow(exceptions);
 
             // Call StartedAsync().
-            if (this.#hostedLifecycleServices)
-            {
+            if (this.#hostedLifecycleServices) {
                 await this.#foreachService(this.#hostedLifecycleServices, cancellationToken, concurrent, abortOnFirstException, exceptions,
                     (service, token) => service.startedAsync(token)
                 );
+                // Exceptions in startedAsync cause startup to be aborted
+                this.#logAndRethrow(exceptions);
             }
 
             // Call IHostApplicationLifetime.Started
             // This catches all exceptions and does not re-throw.
             this.#applicationLifetime.notifyStarted();
+
+            this.#logger.info('Hosting started')
         }
         catch (error) {
             this.#logger.error('Hosting failed', error)
             throw error
-        }
-        finally {
-            this.#logger.info('Hosting started')
         }
     }
 
@@ -275,13 +279,11 @@ class Host {
             }
 
             this.#hostStopped = true;
+            this.#logAndRethrow(exceptions);
+            this.#logger.info('Host stopped');
         }
         catch (error) {
-            this.#logger.info('Host stopped failed');
             throw error;
-        }
-        finally {
-            this.#logger.info('Host stopped');
         }
     }
 
@@ -336,6 +338,17 @@ class Host {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Log and abort if there are exceptions
+     * 
+     * @param {Error[]} exceptions - Lista para acumular excepciones.
+     */
+    #logAndRethrow(exceptions = []) {
+        if (exceptions.length > 0) {
+            throw new AggregateError(exceptions, 'One or more hosted services failed to start.');
         }
     }
 }

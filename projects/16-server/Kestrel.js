@@ -49,8 +49,34 @@ class KestrelServer {
      * @returns {Promise<void>}
      */
     async startAsync(application, cancellationToken) {
-        // Inicia la escucha de conexiones
-        await this.#socketConnectionListener.bindAsync(application, cancellationToken);
+        this._validateOptions();
+    
+        if (this._hasStarted) throw new Error("Server already started");
+        this._hasStarted = true;
+    
+        // this.serviceContext.heartbeat?.start();
+    
+        // OnBind: para cada listener SPA
+        const onBind = async (listenOptions, cancellationToken) => {
+            // Decide qué eventos/transportes activar (popstate, hashchange, etc)
+            if (listenOptions.protocols.includes('popstate')) {
+                if (!this.transportFactories.length)
+                    throw new Error("No listener factories registered");
+    
+                // UseHttpServer: compón el pipeline de navegación
+                const connectionDelegate = listenOptions.buildPipeline(application);
+    
+                // BindAsync: registra el listener en el browser
+                listenOptions.endpoint = await this.transportManager.bindAsync(
+                    listenOptions.endpoint, connectionDelegate, listenOptions, cancellationToken
+                );
+            }
+            // ...otros protocolos/eventos si fueran necesarios...
+        };
+    
+        this.addressBindContext = new AddressBindContext(this.serverAddresses, this.options, this.trace, onBind);
+    
+        await this.bindAsync(cancellationToken);
     }
 
     /**
@@ -61,7 +87,6 @@ class KestrelServer {
      */
     async stopAsync(cancellationToken) {
         // Detener el listener si es necesario
-        this.#socketConnectionListener.unbindAsync(cancellationToken);
     }
 }
 

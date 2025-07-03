@@ -1,21 +1,5 @@
-/**
- * @typedef {object} RouterProps - Las propiedades del componente.
- * @property {strng} [basePath] - Ruta de acceso base de la solicitud. La base de ruta de acceso no debe terminar con una barra diagonal final.
- * @property {React.ReactNode} children - Componente <Routes> Contenedor para la definición de rutas anidadas.
- */
-
-/**
- * @typedef {Object} RouterState - Valor del estado del componente.
- * @property {RequestContextValue} req - Información de la solicitud HTTP actual.
- */
-
-
-import { createReactElement as h } from '../Shared/ReactFunctions.js';
-import RouterContext from './RouterContext.js';
-import RequestContext from './RequestContext.js';
-import RequestContextValue from './RequestContextValue.js';
-import RouterContextValue from './RouterContextValue.js';
 import normalizePath from './normalizePath.js';
+import { CancellationToken } from '@spajscore/threading';
 
 
 /**
@@ -28,29 +12,36 @@ import normalizePath from './normalizePath.js';
  * un contexto para la navegación y los datos de la ruta actual.
  */
 class SocketConnectionListener {
-    /**
-     * 
-     * @param {(event: Event) => void} event
-     */
+    /** @param {(event: Event) => void} event */
     #bindHandlerBound = event => { };
+    /** @type {HttpApplication} */
+    #application;
 
+    /**
+     * @param {object} deps
+     * @param {LoggerFactory} deps.loggerFactory
+     */
     constructor({ loggerFactory }) {
 
     }
 
     /**
-     * 
+     * bind
+     * @param {HttpApplication} application
+     * @param {CancellationToken} cancellationToken
      */
-    accept() {
-        this.#updateLocation();
-        this.#bindHandlerBound = (event) => this.#handlePopState(event);
-        window.addEventListener('popstate', this.#bindHandlerBound);
+    async bindAsync(application, cancellationToken) {
+        this.#application = application;
+        this.#bindHandlerBound = (event) => this.#handlePopStateAsync(event, cancellationToken);
+        window.addEventListener('popstate', this.#bindHandlerBound.bind(null));
+        await this.#acceptAsync(cancellationToken);
     }
 
     /**
-     * 
+     * unbind
+     * @param {CancellationToken} cancellationToken
      */
-    unbind() {
+    async unbindAsync(cancellationToken) {
         window.removeEventListener('popstate', this.#bindHandlerBound);
     }
 
@@ -62,11 +53,12 @@ class SocketConnectionListener {
      * @name handlePopState
      * @description Actualiza la ubicación interna del componente para reflejar el historial.
      * @param {Event} event 
+     * @param {CancellationToken} cancellationToken 
      * @returns {void}
      */
-    #handlePopState(event) {
-        console.log('Popstate event triggered. Current history state:', window.history.state);
-        this.#updateLocation();
+    async #handlePopStateAsync(event, cancellationToken) {
+        //console.log('Popstate event triggered. Current history state:', window.history.state);
+        await this.#acceptAsync(cancellationToken);
     }
 
     /**
@@ -75,24 +67,16 @@ class SocketConnectionListener {
      * @method
      * @name updateLocation
      * @description Extrae la ruta (`pathname`), los parámetros de consulta (`query`) y el estado (`history.state`) para mantener sincronizado el estado.
+     * @param {CancellationToken} cancellationToken 
      * @returns {void}
      */
-    #updateLocation() {
-        const stateDataInfo = window.history.state;
+    async #acceptAsync(cancellationToken) {
+        const context = this.#application.createContext(this);
+        try {
+            await this.#application.processRequestAsync(context);
+        } catch (error) {
 
-        const currentRequestContext = RequestContextValue.fromWindowLocation({
-            pathBase: this.pathBase,
-            // El `relativePath` específicamente, puedes derivarlo del `.path`.
-            path: this.#getRelativePath(fullPath),
-            contentLength: stateDataInfo?.contentLength,
-            contentType: stateDataInfo?.contentType,
-            hasFormContentType: stateDataInfo?.hasFormContentType,
-            form: stateDataInfo?.form,
-        });
-
-        this.setState({
-            req: currentRequestContext
-        });
+        }
     }
 
     /**
@@ -105,11 +89,11 @@ class SocketConnectionListener {
      * @param {object} [state={}] - Objeto de estado asociado a la nueva ruta.
      * @returns {void}
      */
-    navigate(relativePath, state = {}) {
+    async navigateAsync(relativePath, state = {}) {
         const fullPath = this.#getFullPath(relativePath);
         window.history.pushState(state, null, fullPath);
-        console.log(`Navigating to: ${fullPath} with state:`, state);
-        this.#updateLocation();
+        // console.log(`Navigating to: ${fullPath} with state:`, state);
+        await this.#acceptAsync();
     }
 
     /**
@@ -122,11 +106,11 @@ class SocketConnectionListener {
      * @param {object} [state={}] - Objeto de estado asociado a la nueva ruta.
      * @returns {void}
      */
-    replace(relativePath, state = {}) {
+    async replaceAsync(relativePath, state = {}) {
         const fullPath = this.#getFullPath(relativePath);
         window.history.replaceState(state, null, fullPath);
         console.log(`Replacing current history entry with: ${fullPath} with state:`, state);
-        this.#updateLocation();
+        await this.#acceptAsync();
     }
 
     /**
@@ -156,3 +140,5 @@ class SocketConnectionListener {
         return normalizePath(`${this.basePath}/${cleanRelativePath}`);
     }
 }
+
+export default SocketConnectionListener;

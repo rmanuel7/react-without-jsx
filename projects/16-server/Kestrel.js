@@ -1,5 +1,6 @@
 import { FeatureCollection } from "@spajscore/extensions";
 import { CancellationToken } from "@spajscore/threading";
+import SocketConnectionListener from './transport/SocketConectionListener.js';
 
 /**
  * Kestrel
@@ -27,8 +28,8 @@ import { CancellationToken } from "@spajscore/threading";
  * await kestrel.stopAsync(cancellationToken);
  */
 class Kestrel {
-    #application;
     #features;
+    /** @type {SocketConnectionListener} */
     #socketConnectionListener;
 
     /**
@@ -59,19 +60,8 @@ class Kestrel {
      * @returns {Promise<void>}
      */
     async startAsync(application, cancellationToken) {
-        this.#application = application;
-
-        // Define el connectionDelegate
-        const connectionDelegate = async (connectionContext, ...args) => {
-            // Llama a la lógica de aplicación para procesar la conexión
-            await application.processRequest(connectionContext, cancellationToken, ...args);
-        };
-
-        // Asigna el delegate al listener
-        this.#socketConnectionListener.setConnectionDelegate(connectionDelegate);
-
         // Inicia la escucha de conexiones
-        await this.#socketConnectionListener.accept();
+        await this.#socketConnectionListener.bindAsync(application, cancellationToken);
     }
 
     /**

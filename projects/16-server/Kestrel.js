@@ -2,46 +2,35 @@ import { FeatureCollection } from "@spajscore/extensions";
 import { CancellationToken } from "@spajscore/threading";
 import SocketConnectionListener from './transport/SocketConectionListener.js';
 
-/**
- * Kestrel
- * =======
- * 
- * Clase principal que representa el servidor HTTP inspirado en Kestrel de .NET Core.
- * Se encarga de orquestar la recepción de conexiones y el ciclo de vida de la aplicación HTTP.
- * Utiliza un `SocketConnectionListener` para aceptar conexiones, y delega el procesamiento
- * de cada solicitud a una instancia de `HttpApplication`.
- * 
- * @example
- * import Kestrel from './Kestrel.js';
- * import FeatureCollection from '@spajscore/extensions';
- * import SocketConnectionListener from './SocketConnectionListener.js';
- * 
- * const kestrel = new Kestrel({
- *   features: new FeatureCollection(),
- *   socketConnectionListener: new SocketConnectionListener({ loggerFactory })
- * });
- * 
- * // Arranca el servidor pasando la aplicación y el token de cancelación
- * await kestrel.startAsync(myHttpApplication, cancellationToken);
- * 
- * // Detiene el servidor
- * await kestrel.stopAsync(cancellationToken);
- */
-class Kestrel {
-    #features;
-    /** @type {SocketConnectionListener} */
-    #socketConnectionListener;
-
+class KestrelServer {
     /**
-     * Crea una nueva instancia de Kestrel.
-     * 
-     * @param {object} deps 
-     * @param {FeatureCollection} deps.features - Colección de features a usar por el servidor.
-     * @param {SocketConnectionListener} deps.socketConnectionListener - Componente encargado de aceptar conexiones.
+     * @param {object} opts
+     * @param {object} opts.options - Opciones del servidor (simil KestrelServerOptions)
+     * @param {Array<RouterListenerFactory>} opts.transportFactories - Fabrica de listeners para SPA (popstate, pushState, etc)
+     * @param {Array<any>} [opts.multiplexedFactories] - Extensible para protocolos avanzados (opcional)
+     * @param {any} [opts.httpsConfigurationService] - No aplica, pero para alineación estructural
+     * @param {function} [opts.loggerFactory] - Fábrica de loggers
+     * @param {any} [opts.metrics] - Métricas/telemetría (opcional)
      */
-    constructor({ features, socketConnectionListener }) {
-        this.#features = features;
-        this.#socketConnectionListener = socketConnectionListener;
+    constructor({
+        options,
+        transportFactories,
+        multiplexedFactories = [],
+        httpsConfigurationService = null,
+        loggerFactory = null,
+        metrics = null
+    }) {
+        if (!options) throw new Error('KestrelServer: options es requerido');
+        if (!transportFactories) throw new Error('KestrelServer: transportFactories es requerido');
+
+        this.options = options;
+        this.transportFactories = transportFactories;
+        this.multiplexedFactories = multiplexedFactories;
+        this.httpsConfigurationService = httpsConfigurationService;
+        this.loggerFactory = loggerFactory;
+        this.metrics = metrics;
+
+        // Puedes instanciar aquí lo que sería "ServiceContext" si lo necesitas.
     }
 
     /**

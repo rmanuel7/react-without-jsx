@@ -79,6 +79,38 @@ class KestrelServer {
         await this.bindAsync(cancellationToken);
     }
 
+    async bindAsync(cancellationToken) {
+        // 1. Previene doble bind
+        if (this._binding) throw new Error("Already binding");
+        this._binding = true;
+    
+        try {
+            if (this._stopping) throw new Error("Server stopped");
+    
+            // 2. (Opcional) Prevenir mutaciones en endpoints
+            this.serverAddresses.preventExternalMutation();
+    
+            // 3. (Opcional) Suscribirse a cambios de configuración dinámica
+            if (this.options.reloadOnChange) {
+                this._configChangedRegistration = this.options.onReload(() => this.triggerRebind());
+            }
+    
+            // 4. Actualiza la configuración interna de endpoints
+            this.options.loadInternal();
+            this.options.processEndpointsToAdd();
+    
+            // 5. Para cada ListenOption (por ejemplo, popstate, hashchange, etc.)
+            await AddressBinder.bindAsync(
+                this.options.getListenOptions(),  // [{eventType: 'popstate', ...}]
+                this.addressBindContext,          // Incluye el onBind y el application
+                this.httpsConfigurationService,   // No relevante en SPA
+                cancellationToken
+            );
+        } finally {
+            this._binding = false;
+        }
+    }
+    
     /**
      * Detiene el servidor y libera recursos.
      * 

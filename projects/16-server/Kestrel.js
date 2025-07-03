@@ -72,9 +72,7 @@ class Kestrel {
      */
     async stopAsync(cancellationToken) {
         // Detener el listener si es necesario
-        if (typeof this.#socketConnectionListener.unbind === 'function') {
-            this.#socketConnectionListener.unbind(cancellationToken);
-        }
+        this.#socketConnectionListener.unbindAsync(cancellationToken);
     }
 }
 

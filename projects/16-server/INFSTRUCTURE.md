@@ -66,3 +66,12 @@ Tu ejemplo de `addEventListener` es la clave para la implementación de estos li
 # Paso 3: Implementación de TransportManager
 Esta clase será responsable de vincular EndPoints a los ConnectionListenerFactorys apropiados y de mantener un registro de los ConnectionListeners activos, permitiendo su detención controlada.
 
+---
+
+# Paso 4: Implementación de AddressBindContext
+Esta clase servirá como un contenedor de datos para el contexto de la operación de vinculación de direcciones, utilizado por el AddressBinder (que definiremos más adelante).
+
+# Paso 5: Implementación de la Interfaz Strategy
+Esta clase define la interfaz para cualquier estrategia de vinculación de direcciones.
+
+Esta Strategy será un componente clave en el proceso de vinculación de direcciones, muy probablemente utilizada o implementada por el `AddressBinder` que discutimos anteriormente.

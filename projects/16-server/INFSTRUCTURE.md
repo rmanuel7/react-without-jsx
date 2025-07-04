@@ -74,4 +74,7 @@ Esta clase servirá como un contenedor de datos para el contexto de la operació
 # Paso 5: Implementación de la Interfaz Strategy
 Esta clase define la interfaz para cualquier estrategia de vinculación de direcciones.
 
-Esta Strategy será un componente clave en el proceso de vinculación de direcciones, muy probablemente utilizada o implementada por el `AddressBinder` que discutimos anteriormente.
+Esta `Strategy` será un componente clave en el proceso de vinculación de direcciones, muy probablemente utilizada o implementada por el `AddressBinder` que discutimos anteriormente.
+
+# Paso 6: Implementación de EndpointsStrategy
+Esta clase implementa la interfaz `Strategy` y se encarga de iterar sobre una colección de `ListenOptions` y vincular cada una.

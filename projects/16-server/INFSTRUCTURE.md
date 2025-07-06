@@ -67,6 +67,8 @@ Tu ejemplo de `addEventListener` es la clave para la implementación de estos li
 Esta clase será responsable de vincular EndPoints a los ConnectionListenerFactorys apropiados y de mantener un registro de los ConnectionListeners activos, permitiendo su detención controlada.
 
 ---
+`================================================================ NXT LEVEL ================================================================`
+---
 
 # Paso 4: Implementación de AddressBindContext
 Esta clase servirá como un contenedor de datos para el contexto de la operación de vinculación de direcciones, utilizado por el AddressBinder (que definiremos más adelante).
@@ -78,3 +80,17 @@ Esta `Strategy` será un componente clave en el proceso de vinculación de direc
 
 # Paso 6: Implementación de EndpointsStrategy
 Esta clase implementa la interfaz `Strategy` y se encarga de iterar sobre una colección de `ListenOptions` y vincular cada una.
+
+
+
+---
+`================================================================ BRAKE NXT LEVEL ================================================================`
+---
+
+- package: Feature
+- package: CncellationToken
+- folder - net
+- BaseConnectionContext
+- -> ConnectionLifetimeFeature
+- ConnectionContext
+- TransportConnection
